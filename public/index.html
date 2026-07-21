@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>GamifyDeals – Cheapest Steam Games | Shared Accounts</title>
+  <meta name="description" content="Buy 200+ premium Steam games at unbeatable prices. Shared accounts, instant delivery, lifetime warranty. Starting ₹49."/>
+  <link rel="stylesheet" href="/style.css"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"/>
+  <link rel="icon" href="/logo.png" type="image/png"/>
+  <!-- Razorpay SDK -->
+  <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+</head>
+<body>
+
+<!-- NAVBAR -->
+<nav class="navbar" id="navbar">
+  <a href="/" class="nav-logo">
+    <img src="/logo.png" alt="GamifyDeals Logo" class="logo-img" onerror="this.style.display='none'"/>
+    <span>Gamify<em>Deals</em></span>
+  </a>
+
+  <!-- Desktop nav links -->
+  <div class="nav-links" id="navLinks">
+    <a href="/">Home</a>
+    <a href="#games">Games</a>
+    <a href="#how-it-works">How It Works</a>
+    <a href="/contact.html">Contact</a>
+  </div>
+
+  <!-- Right section – always visible -->
+  <div class="nav-right">
+    <div class="nav-search" id="desktopSearch">
+      <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      <input type="text" id="searchInput" placeholder="Search games…" autocomplete="off"/>
+    </div>
+    <button class="cart-btn" id="navCartBtn" aria-label="Cart">
+      🛒
+      <span class="cart-badge" id="cartBadge" style="display:none">0</span>
+    </button>
+    <button class="hamburger" id="hamburger" aria-label="Menu">
+      <span></span><span></span><span></span>
+    </button>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-badge">🎮 Steam Shared Accounts · Instant WhatsApp Delivery</div>
+  <h1>Premium Steam Games<br>at <span>Unbeatable Prices</span></h1>
+  <p>200+ premium Steam titles at a fraction of the original price. Pay via Razorpay — direct Steam account credentials delivered instantly.</p>
+  <div class="hero-stats">
+    <div class="hero-stat"><div class="num">200+</div><div class="label">Games</div></div>
+    <div class="hero-stat"><div class="num">5,000+</div><div class="label">Customers</div></div>
+    <div class="hero-stat"><div class="num">₹49</div><div class="label">Starting Price</div></div>
+    <div class="hero-stat"><div class="num">24/7</div><div class="label">Support</div></div>
+  </div>
+  <div class="hero-buttons">
+    <a href="#games" class="btn-primary">Browse All Games</a>
+    <a href="/contact.html" class="btn-secondary">Contact Support</a>
+  </div>
+</section>
+
+<!-- NOTICE -->
+<div class="notice-bar">
+  <span>⚠️</span>
+  <span>These are <strong>shared Steam accounts</strong>. Play in <strong>offline mode</strong>. <strong>Lifetime warranty</strong> – free replacement guaranteed.</span>
+</div>
+
+<!-- HOW IT WORKS -->
+<section class="section" id="how-it-works">
+  <div class="section-header"><div class="section-title"><span>📋</span> How It Works</div></div>
+  <div class="how-steps">
+    <div class="how-step"><div class="step-number">01</div><h3>Browse &amp; Choose</h3><p>Pick any game, add to cart or click Buy Now.</p></div>
+    <div class="how-step"><div class="step-number">02</div><h3>Pay via Razorpay</h3><p>UPI, Card, Net Banking – all accepted. 100% secure.</p></div>
+    <div class="how-step"><div class="step-number">03</div><h3>Get Your Order Page</h3><p>Redirect to your secure order page after payment.</p></div>
+    <div class="how-step"><div class="step-number">04</div><h3>Reveal Credentials</h3><p>Click "Reveal" on your order page to see Steam login.</p></div>
+  </div>
+</section>
+
+<!-- FEATURED -->
+<div class="featured-outer">
+  <div class="featured-strip">
+    <div class="featured-cover">
+      <img src="https://cdn.cloudflare.steamstatic.com/steam/apps/271590/library_600x900.jpg"
+           alt="GTA V"
+           onerror="this.onerror=null;this.src='https://cdn.cloudflare.steamstatic.com/steam/apps/271590/header.jpg'"/>
+    </div>
+    <div class="featured-info">
+      <span class="featured-tag">🔥 Deal of the Week</span>
+      <h2>Grand Theft Auto V<br>Premium Edition</h2>
+      <p>Explore Los Santos. Story mode + GTA Online access. Shared account – play offline mode.</p>
+      <div class="featured-price-row">
+        <span class="featured-price">₹149</span>
+        <span class="featured-original">₹1,799</span>
+        <span class="featured-save">SAVE 92%</span>
+      </div>
+      <div class="featured-buttons">
+        <a href="#" class="btn-buy-featured"
+           onclick="openFeaturedModal('Grand Theft Auto V','₹149','Action','https://cdn.cloudflare.steamstatic.com/steam/apps/271590/library_600x900.jpg');return false;">
+          Buy Now
+        </a>
+        <a href="/contact.html" class="btn-secondary">Ask a Question</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- WHY US -->
+<section class="why-us">
+  <div class="why-us-inner">
+    <div class="section-header"><div class="section-title"><span>✅</span> Why GamifyDeals?</div></div>
+    <div class="why-us-grid">
+      <div class="why-card"><div class="why-icon">⚡</div><h3>Instant Delivery</h3><p>Steam credentials on your order page within minutes.</p></div>
+      <div class="why-card"><div class="why-icon">🛡️</div><h3>Lifetime Warranty</h3><p>Account stops working? Free replacement, no questions.</p></div>
+      <div class="why-card"><div class="why-icon">💰</div><h3>Lowest Prices</h3><p>Up to 95% off original Steam prices.</p></div>
+      <div class="why-card"><div class="why-icon">🔐</div><h3>Secure Payment</h3><p>Razorpay — UPI, Card, Net Banking. Bank-grade security.</p></div>
+      <div class="why-card"><div class="why-icon">🎮</div><h3>200+ Titles</h3><p>AAA games, indie hits, sports, strategy and more.</p></div>
+      <div class="why-card"><div class="why-icon">🤝</div><h3>24/7 Support</h3><p>WhatsApp support for all issues and warranty claims.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- GAMES SECTION -->
+<section class="section" id="games">
+  <div class="section-header">
+    <div class="section-title"><span>🎮</span> All Games</div>
+    <span id="gamesCountLabel" style="font-size:12px;color:var(--text-muted)">Loading…</span>
+  </div>
+
+  <!-- Mobile search -->
+  <div class="mobile-search-bar" id="mobileSearchBar">
+    <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+    <input type="text" id="mobileSearchInput" placeholder="Search games…" autocomplete="off"/>
+  </div>
+
+  <div class="filter-bar">
+    <button class="filter-btn active" data-filter="all">All</button>
+    <button class="filter-btn" data-filter="Action">Action</button>
+    <button class="filter-btn" data-filter="RPG">RPG</button>
+    <button class="filter-btn" data-filter="Shooter">Shooter</button>
+    <button class="filter-btn" data-filter="Horror">Horror</button>
+    <button class="filter-btn" data-filter="Sports">Sports</button>
+    <button class="filter-btn" data-filter="Adventure">Adventure</button>
+    <button class="filter-btn" data-filter="Strategy">Strategy</button>
+    <button class="filter-btn" data-filter="Indie">Indie</button>
+    <button class="filter-btn" data-filter="Fighting">Fighting</button>
+  </div>
+
+  <div class="games-grid" id="gamesGrid"></div>
+
+  <div class="load-more-wrap">
+    <button class="btn-load-more" id="loadMoreBtn" style="display:none">Load More Games ↓</button>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-inner">
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <a href="/" class="nav-logo" style="font-size:17px;margin-bottom:10px;display:inline-flex">
+          <img src="/logo.png" alt="GamifyDeals" class="logo-img" style="height:30px" onerror="this.style.display='none'"/>
+          <span>Gamify<em>Deals</em></span>
+        </a>
+        <p>Trusted source for affordable Steam game access in India. Shared accounts, instant delivery, lifetime warranty.</p>
+      </div>
+      <div class="footer-col">
+        <h4>Navigate</h4>
+        <ul>
+          <li><a href="/">Home</a></li>
+          <li><a href="#games">Browse Games</a></li>
+          <li><a href="#how-it-works">How It Works</a></li>
+          <li><a href="/contact.html">Contact</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Support</h4>
+        <ul>
+          <li><a href="/contact.html">Help Center</a></li>
+          <li><a href="#how-it-works">Delivery Guide</a></li>
+          <li><a href="/contact.html">Warranty Claim</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Contact</h4>
+        <ul>
+          <li><a href="https://wa.me/917908719976" target="_blank">WhatsApp: +91 79087 19976</a></li>
+          <li><a href="mailto:support@gamifydeals.com">support@gamifydeals.com</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p>© 2024 GamifyDeals.com · Payments by Razorpay</p>
+      <div class="footer-tags">
+        <span class="footer-tag">Instant Delivery</span>
+        <span class="footer-tag">Lifetime Warranty</span>
+        <span class="footer-tag">Razorpay Secure</span>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<!-- BUY MODAL (email collection → Razorpay) -->
+<div class="modal-overlay" id="buyModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div><h3>Complete Your Order</h3><p>Enter your email to continue to payment</p></div>
+      <button class="modal-close" id="closeModal">✕</button>
+    </div>
+    <div class="modal-game-row">
+      <img class="modal-game-img" id="modalGameImg" src="" alt="" onerror="this.style.display='none'"/>
+      <div style="flex:1;min-width:0">
+        <div class="modal-game-title" id="modalGameName">Game Name</div>
+        <div style="font-size:11px;color:var(--text-muted)" id="modalGenre">Genre</div>
+        <div class="modal-game-price" id="modalGamePrice">₹—</div>
+      </div>
+    </div>
+    <div class="modal-form">
+      <div class="modal-form-group">
+        <label>Email Address *</label>
+        <input type="email" id="buyerEmail" placeholder="your@email.com" autocomplete="email"/>
+        <small>Your order credentials will be accessible via this email's order page.</small>
+      </div>
+      <div class="modal-form-group">
+        <label>WhatsApp (optional)</label>
+        <input type="tel" id="buyerWhatsapp" placeholder="+91 XXXXX XXXXX"/>
+      </div>
+    </div>
+    <ul class="modal-info-list">
+      <li class="modal-info-item"><span>🔐</span> Secure payment via Razorpay (UPI / Card / Net Banking)</li>
+      <li class="modal-info-item"><span>🛡️</span> Lifetime warranty – free replacement guaranteed</li>
+      <li class="modal-info-item"><span>⚡</span> Credentials on your order page within minutes</li>
+    </ul>
+    <div class="modal-actions">
+      <button class="btn-proceed" id="proceedBtn">Pay via Razorpay →</button>
+      <button class="btn-cancel" id="cancelModal">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script src="/games.js"></script>
+<script src="/script.js"></script>
+</body>
+</html>

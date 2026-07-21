@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>My Order – GamifyDeals</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%23e63946'/><text y='.9em' font-size='70' x='15'>🎮</text></svg>"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"/>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Inter',sans-serif;background:#0d0f14;color:#e8eaf0;min-height:100vh}
+    a{color:inherit;text-decoration:none}
+
+    .navbar{display:flex;align-items:center;justify-content:space-between;padding:0 24px;height:60px;background:#13161e;border-bottom:1px solid #1f2333;position:sticky;top:0;z-index:100}
+    .nav-logo{display:flex;align-items:center;gap:10px;font-size:18px;font-weight:700}
+    .nav-logo img{height:36px;object-fit:contain}
+    .nav-logo span em{color:#e63946;font-style:normal}
+    .nav-link{color:#9ea3b5;font-size:13px;font-weight:500;transition:color .15s}
+    .nav-link:hover{color:#e8eaf0}
+
+    .page-wrap{max-width:640px;margin:0 auto;padding:40px 20px}
+
+    .loading-state{text-align:center;padding:80px 20px}
+    .loading-state .spinner{display:inline-block;width:32px;height:32px;border:3px solid rgba(230,57,70,.2);border-top-color:#e63946;border-radius:50%;animation:spin .7s linear infinite}
+    .loading-state p{margin-top:16px;color:#6b7280;font-size:14px}
+    @keyframes spin{to{transform:rotate(360deg)}}
+
+    .error-state{text-align:center;padding:80px 20px}
+    .error-state .icon{font-size:48px;margin-bottom:16px}
+    .error-state h2{font-size:20px;margin-bottom:8px}
+    .error-state p{color:#6b7280;font-size:14px;margin-bottom:20px}
+
+    /* Order card */
+    .order-card{background:#13161e;border:1px solid #1f2333;border-radius:14px;overflow:hidden;margin-bottom:20px}
+    .order-card-header{padding:20px 24px;border-bottom:1px solid #1f2333;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
+    .order-card-header h2{font-size:16px;font-weight:600}
+    .order-id{font-family:'Consolas',monospace;font-size:11px;color:#6b7280}
+    .status-badge{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:12px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.4px}
+    .status-paid{background:rgba(46,196,182,.12);color:#2ec4b6}
+    .status-pending{background:rgba(244,162,97,.12);color:#f4a261}
+    .status-failed{background:rgba(230,57,70,.12);color:#e63946}
+
+    .order-meta{padding:20px 24px;display:grid;grid-template-columns:1fr 1fr;gap:14px;border-bottom:1px solid #1f2333}
+    .meta-item label{font-size:11px;color:#6b7280;font-weight:500;text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:4px}
+    .meta-item span{font-size:14px;font-weight:500}
+
+    .game-info-row{padding:20px 24px;display:flex;align-items:center;gap:16px;border-bottom:1px solid #1f2333}
+    .game-cover{width:60px;height:80px;border-radius:8px;object-fit:cover;background:#1a1d28}
+    .game-cover-placeholder{width:60px;height:80px;border-radius:8px;background:#1a1d28;display:flex;align-items:center;justify-content:center;font-size:28px;flex-shrink:0}
+    .game-details h3{font-size:16px;font-weight:600;margin-bottom:4px}
+    .game-details p{font-size:12px;color:#6b7280}
+    .game-details .amount{font-size:20px;font-weight:700;color:#e63946;margin-top:6px}
+
+    /* Credentials section */
+    .credentials-section{padding:24px}
+    .cred-heading{font-size:14px;font-weight:600;margin-bottom:6px;display:flex;align-items:center;gap:6px}
+    .cred-desc{font-size:13px;color:#6b7280;margin-bottom:20px;line-height:1.6}
+    .reveal-btn{width:100%;background:#e63946;color:#fff;border:none;padding:13px;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer;transition:background .15s;display:flex;align-items:center;justify-content:center;gap:8px}
+    .reveal-btn:hover{background:#ff4d5a}
+    .reveal-btn:disabled{background:#4b5563;cursor:not-allowed}
+
+    .cred-box{background:rgba(46,196,182,.07);border:1px solid rgba(46,196,182,.25);border-radius:10px;padding:18px;display:none}
+    .cred-box.visible{display:block}
+    .cred-field{margin-bottom:12px}
+    .cred-field:last-child{margin-bottom:0}
+    .cred-label{font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;font-weight:600;margin-bottom:6px}
+    .cred-value-row{display:flex;align-items:center;gap:10px;background:#0d0f14;border:1px solid #1f2333;border-radius:8px;padding:10px 14px}
+    .cred-value{font-family:'Consolas',monospace;font-size:15px;color:#2ec4b6;font-weight:600;flex:1;word-break:break-all}
+    .copy-btn{flex-shrink:0;background:rgba(46,196,182,.1);border:1px solid rgba(46,196,182,.25);color:#2ec4b6;padding:5px 10px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;transition:all .15s}
+    .copy-btn:hover{background:#2ec4b6;color:#0d0f14}
+
+    .warn-box{background:rgba(244,162,97,.08);border:1px solid rgba(244,162,97,.25);border-radius:8px;padding:14px;margin-top:16px;font-size:12px;color:#f4a261;line-height:1.6}
+    .pending-box{background:rgba(244,162,97,.08);border:1px solid rgba(244,162,97,.25);border-radius:10px;padding:20px;text-align:center}
+    .pending-box h3{color:#f4a261;margin-bottom:6px;font-size:15px}
+    .pending-box p{font-size:13px;color:#9ea3b5;line-height:1.6}
+    .whatsapp-btn{display:inline-flex;align-items:center;gap:7px;background:#25d366;color:#fff;padding:10px 18px;border-radius:8px;font-size:13px;font-weight:600;margin-top:14px;transition:background .15s}
+    .whatsapp-btn:hover{background:#1da851}
+
+    /* How to play */
+    .how-box{background:#13161e;border:1px solid #1f2333;border-radius:14px;padding:20px;margin-bottom:20px}
+    .how-box h3{font-size:14px;font-weight:600;margin-bottom:14px}
+    .how-step{display:flex;gap:12px;margin-bottom:12px}
+    .how-step:last-child{margin-bottom:0}
+    .step-num{width:24px;height:24px;border-radius:6px;background:rgba(230,57,70,.15);color:#e63946;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
+    .step-text{font-size:13px;color:#9ea3b5;line-height:1.6}
+    .step-text strong{color:#e8eaf0}
+
+    @media(max-width:480px){
+      .order-meta{grid-template-columns:1fr}
+      .page-wrap{padding:20px 14px}
+    }
+  </style>
+</head>
+<body>
+
+<nav class="navbar">
+  <a href="/" class="nav-logo">
+    <img src="/logo.png" alt="GamifyDeals" onerror="this.style.display='none'"/>
+    <span>Gamify<em>Deals</em></span>
+  </a>
+  <a href="/" class="nav-link">← Back to Store</a>
+</nav>
+
+<div class="page-wrap">
+
+  <!-- Loading -->
+  <div class="loading-state" id="loadingState">
+    <div class="spinner"></div>
+    <p>Loading your order…</p>
+  </div>
+
+  <!-- Error -->
+  <div class="error-state" id="errorState" style="display:none">
+    <div class="icon">🔒</div>
+    <h2 id="errorTitle">Access Denied</h2>
+    <p id="errorMsg">Your order link is invalid or has been tampered with.</p>
+    <a href="/" style="display:inline-block;margin-top:16px;background:#e63946;color:#fff;padding:10px 20px;border-radius:8px;font-size:13px;font-weight:600;">Browse Games →</a>
+  </div>
+
+  <!-- Order Content -->
+  <div id="orderContent" style="display:none">
+
+    <!-- Order Card -->
+    <div class="order-card">
+      <div class="order-card-header">
+        <div>
+          <h2>Order Confirmed ✅</h2>
+          <div class="order-id" id="displayOrderId">Order ID: …</div>
+        </div>
+        <span class="status-badge status-paid" id="statusBadge">Paid</span>
+      </div>
+
+      <div class="order-meta">
+        <div class="meta-item">
+          <label>Order Date</label>
+          <span id="metaDate">—</span>
+        </div>
+        <div class="meta-item">
+          <label>Payment Date</label>
+          <span id="metaPaid">—</span>
+        </div>
+        <div class="meta-item">
+          <label>Email</label>
+          <span id="metaEmail">—</span>
+        </div>
+        <div class="meta-item">
+          <label>Amount Paid</label>
+          <span id="metaAmount" style="color:#e63946;font-weight:700">—</span>
+        </div>
+      </div>
+
+      <div class="game-info-row">
+        <div id="gameCoverWrap">
+          <div class="game-cover-placeholder" id="gameEmoji">🎮</div>
+        </div>
+        <div class="game-details">
+          <h3 id="gameName">Loading…</h3>
+          <p id="gameGenre">Genre</p>
+          <div class="amount" id="gameAmount">₹—</div>
+        </div>
+      </div>
+
+      <!-- CREDENTIALS -->
+      <div class="credentials-section">
+        <div class="cred-heading">🔐 Steam Account Credentials</div>
+        <div class="cred-desc">
+          Your credentials are encrypted and stored securely. Click the button below to reveal your Steam account details. Save them somewhere safe — this link has no expiry.
+        </div>
+
+        <!-- Pending (no inventory assigned yet) -->
+        <div class="pending-box" id="pendingBox" style="display:none">
+          <h3>⏳ Preparing Your Account</h3>
+          <p>Your payment was received! Our team is assigning your Steam account. This usually takes a few minutes. <br><br>Please WhatsApp us with your Order ID for the fastest response.</p>
+          <a id="whatsappPending" href="#" class="whatsapp-btn" target="_blank">
+            💬 WhatsApp Support
+          </a>
+        </div>
+
+        <!-- Reveal button -->
+        <button class="reveal-btn" id="revealBtn" style="display:none">
+          🔑 Reveal Steam Credentials
+        </button>
+
+        <!-- Credentials box (shown after reveal) -->
+        <div class="cred-box" id="credBox">
+          <div class="cred-field">
+            <div class="cred-label">Steam Username</div>
+            <div class="cred-value-row">
+              <span class="cred-value" id="credUsername">—</span>
+              <button class="copy-btn" onclick="copyText('credUsername','Copy')">Copy</button>
+            </div>
+          </div>
+          <div class="cred-field">
+            <div class="cred-label">Steam Password</div>
+            <div class="cred-value-row">
+              <span class="cred-value" id="credPassword">—</span>
+              <button class="copy-btn" onclick="copyText('credPassword','Copy')">Copy</button>
+            </div>
+          </div>
+          <div class="warn-box">
+            ⚠️ <strong>Important:</strong> This is a <strong>shared account</strong>. Always play in <strong>Steam Offline Mode</strong>. Do not change the account password or email. If you face any issues, contact WhatsApp support — you have <strong>lifetime warranty</strong>.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- How to play -->
+    <div class="how-box">
+      <h3>🎮 How to Play – Steam Offline Mode</h3>
+      <div class="how-step">
+        <div class="step-num">1</div>
+        <div class="step-text">Open Steam and <strong>log in</strong> with the provided credentials.</div>
+      </div>
+      <div class="how-step">
+        <div class="step-num">2</div>
+        <div class="step-text">Go to <strong>Steam → Go Offline</strong> from the top menu.</div>
+      </div>
+      <div class="how-step">
+        <div class="step-num">3</div>
+        <div class="step-text">Restart Steam — it will load in <strong>Offline Mode</strong>.</div>
+      </div>
+      <div class="how-step">
+        <div class="step-num">4</div>
+        <div class="step-text">Launch your game and enjoy! If prompted to go online, click <strong>"Stay in Offline Mode"</strong>.</div>
+      </div>
+      <div class="how-step">
+        <div class="step-num">5</div>
+        <div class="step-text">Issues? WhatsApp us anytime — <strong>lifetime warranty</strong> covers you.</div>
+      </div>
+    </div>
+
+    <div style="text-align:center;padding:10px 0 30px">
+      <a id="whatsappSupport" href="https://wa.me/917908719976" target="_blank" class="whatsapp-btn">
+        💬 WhatsApp Support – +91 79087 19976
+      </a>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  const params   = new URLSearchParams(window.location.search);
+  const ORDER_ID = params.get('order_id');
+  const TOKEN    = params.get('token');
+
+  function fmt(iso) {
+    if (!iso) return '—';
+    return new Date(iso).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' });
+  }
+  function copyText(id, label) {
+    const val = document.getElementById(id).textContent;
+    navigator.clipboard.writeText(val).then(() => {
+      const btn = event.target;
+      btn.textContent = '✓ Copied!';
+      setTimeout(() => btn.textContent = label, 2000);
+    });
+  }
+
+  function showError(title, msg) {
+    document.getElementById('loadingState').style.display = 'none';
+    document.getElementById('errorTitle').textContent = title;
+    document.getElementById('errorMsg').textContent   = msg;
+    document.getElementById('errorState').style.display  = 'block';
+  }
+
+  async function loadOrder() {
+    if (!ORDER_ID || !TOKEN) {
+      showError('Invalid Link', 'This order link is missing required parameters.');
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/orders/my/${ORDER_ID}`, {
+        headers: { 'Authorization': `Bearer ${TOKEN}` }
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        showError(res.status === 401 ? 'Access Denied' : 'Order Not Found',
+          data.error || 'Could not load this order.');
+        return;
+      }
+
+      document.getElementById('loadingState').style.display = 'none';
+      document.getElementById('orderContent').style.display  = 'block';
+
+      // Populate
+      document.getElementById('displayOrderId').textContent = 'Order ID: ' + data.id;
+      document.getElementById('metaDate').textContent   = fmt(data.created_at);
+      document.getElementById('metaPaid').textContent   = fmt(data.paid_at) || 'Pending';
+      document.getElementById('metaEmail').textContent  = data.buyer_email;
+      document.getElementById('metaAmount').textContent = '₹' + parseFloat(data.amount).toFixed(2);
+      document.getElementById('gameName').textContent   = data.game_name  || 'Your Game';
+      document.getElementById('gameGenre').textContent  = data.genre      || 'Game';
+      document.getElementById('gameAmount').textContent = '₹' + parseFloat(data.amount).toFixed(2);
+      document.getElementById('gameEmoji').textContent  = data.emoji      || '🎮';
+
+      const statusBadge = document.getElementById('statusBadge');
+      statusBadge.textContent = data.status;
+      statusBadge.className   = 'status-badge status-' + data.status;
+
+      // Steam cover
+      if (data.steam_app_id) {
+        const img  = new Image();
+        const wrap = document.getElementById('gameCoverWrap');
+        img.src = `https://cdn.cloudflare.steamstatic.com/steam/apps/${data.steam_app_id}/library_600x900.jpg`;
+        img.className = 'game-cover';
+        img.alt = data.game_name;
+        img.onerror = () => {}; // keep placeholder
+        img.onload  = () => { wrap.innerHTML = ''; wrap.appendChild(img); };
+      }
+
+      // WhatsApp links
+      const wpMsg = encodeURIComponent(`Hi! My order ID is ${data.id}. I need help with my Steam account.`);
+      document.getElementById('whatsappSupport').href = `https://wa.me/917908719976?text=${wpMsg}`;
+      document.getElementById('whatsappPending').href = `https://wa.me/917908719976?text=${wpMsg}`;
+
+      // Credentials availability
+      if (data.status !== 'paid') {
+        document.getElementById('pendingBox').style.display = 'block';
+      } else if (!data.has_inventory) {
+        document.getElementById('pendingBox').style.display = 'block';
+      } else {
+        document.getElementById('revealBtn').style.display = 'block';
+        initRevealBtn();
+      }
+
+    } catch (err) {
+      showError('Network Error', 'Could not connect to the server. Is it running?');
+    }
+  }
+
+  function initRevealBtn() {
+    const btn     = document.getElementById('revealBtn');
+    const credBox = document.getElementById('credBox');
+
+    btn.addEventListener('click', async () => {
+      btn.disabled = true;
+      btn.innerHTML = '<span style="display:inline-block;width:16px;height:16px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .6s linear infinite;vertical-align:middle;margin-right:6px"></span>Revealing…';
+
+      try {
+        const res  = await fetch(`/api/orders/my/${ORDER_ID}/reveal`, {
+          method:  'POST',
+          headers: { 'Authorization': `Bearer ${TOKEN}` }
+        });
+        const data = await res.json();
+
+        if (!res.ok) {
+          if (data.pending) {
+            btn.style.display = 'none';
+            document.getElementById('pendingBox').style.display = 'block';
+            return;
+          }
+          alert(data.error || 'Failed to reveal credentials. Try again or contact support.');
+          btn.disabled = false;
+          btn.textContent = '🔑 Reveal Steam Credentials';
+          return;
+        }
+
+        document.getElementById('credUsername').textContent = data.steam_username;
+        document.getElementById('credPassword').textContent = data.steam_password;
+        credBox.classList.add('visible');
+        btn.style.display = 'none';
+      } catch {
+        alert('Network error. Please try again.');
+        btn.disabled = false;
+        btn.textContent = '🔑 Reveal Steam Credentials';
+      }
+    });
+  }
+
+  loadOrder();
+</script>
+
+</body>
+</html>

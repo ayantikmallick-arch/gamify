@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Payment – GamifyDeals.com | Secure Checkout</title>
+  <meta name="description" content="Secure payment for Steam game accounts at GamifyDeals. Pay via UPI QR, PayPal, Crypto, Card or Bank Transfer." />
+  <link rel="stylesheet" href="style.css" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%23e63946'/><text y='.9em' font-size='70' x='15'>🎮</text></svg>" />
+</head>
+<body>
+
+<!-- NAVBAR -->
+<nav class="navbar">
+  <a href="index.html" class="nav-logo">
+    <div class="logo-icon">🎮</div>
+    Gamify<span>Deals</span>
+  </a>
+  <div class="nav-links">
+    <a href="index.html">Home</a>
+    <a href="index.html#games">Games</a>
+    <a href="payment.html" class="active">Buy Now</a>
+    <a href="contact.html">Contact</a>
+  </div>
+  <div class="nav-right">
+    <button class="cart-btn" id="navCartBtn">
+      🛒 Cart
+      <span class="cart-badge" id="cartBadge">0</span>
+    </button>
+    <a href="index.html#games" class="btn-secondary" style="padding:8px 16px;border-radius:6px;font-size:14px;font-weight:500;">← Back</a>
+    <button class="hamburger" id="hamburger"><span></span><span></span><span></span></button>
+  </div>
+</nav>
+
+<!-- PAGE HEADER -->
+<div class="page-header">
+  <h1>🔒 Secure Checkout</h1>
+  <p>Scan UPI QR for your exact game price · Multiple payment methods · Instant confirmation</p>
+</div>
+
+<!-- PAYMENT MAIN -->
+<div class="payment-page">
+
+  <!-- SUCCESS SCREEN -->
+  <div class="success-screen" id="successScreen">
+    <div class="success-icon">🎉</div>
+    <h2>Payment Submitted!</h2>
+    <p>Your payment is under review. Steam credentials will be sent via WhatsApp within <strong>15–30 minutes</strong>.</p>
+    <div class="whatsapp-box">
+      <h3>📱 Next Step – WhatsApp Us</h3>
+      <p>Send your <strong>Transaction ID</strong> to get your Steam account instantly.</p>
+      <div class="whatsapp-number">+91 79087 19976</div>
+      <p style="font-size:12px;margin-bottom:12px;color:var(--text-muted);">Message: <em>"Hi, I paid for [Game]. Transaction ID: XXXX"</em></p>
+      <a href="https://wa.me/917908719976" id="whatsappLink" class="btn-whatsapp" target="_blank">
+        <svg width="18" height="18" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+        Open WhatsApp
+      </a>
+    </div>
+    <div style="margin-top:20px;">
+      <a href="index.html" class="btn-secondary" style="display:inline-block;padding:10px 24px;border-radius:6px;">Browse More Games</a>
+    </div>
+  </div>
+
+  <!-- PAYMENT FORM PANEL -->
+  <div id="paymentFormPanel">
+    <div class="payment-layout">
+
+      <!-- LEFT: FORM -->
+      <div class="payment-form-panel">
+        <div class="payment-form-title">💳 Select Payment Method</div>
+
+        <div class="form-group">
+          <label class="form-label" for="buyerEmail">📧 Your Email <span style="color:var(--accent);">*</span></label>
+          <input type="email" class="form-input" id="buyerEmail" placeholder="you@example.com" required />
+          <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">Credentials backup will be sent here too.</div>
+        </div>
+
+        <!-- PAYMENT TABS -->
+        <div class="payment-tabs">
+          <button class="payment-tab" data-tab="upi"><span class="tab-icon">📱</span>UPI / QR</button>
+          <button class="payment-tab" data-tab="paypal"><span class="tab-icon">🅿️</span>PayPal</button>
+          <button class="payment-tab" data-tab="card"><span class="tab-icon">💳</span>Card</button>
+          <button class="payment-tab" data-tab="crypto"><span class="tab-icon">₿</span>Crypto</button>
+          <button class="payment-tab" data-tab="bank"><span class="tab-icon">🏦</span>Bank</button>
+          <button class="payment-tab" data-tab="razorpay"><span class="tab-icon">⚡</span>Razorpay</button>
+        </div>
+
+        <form id="paymentForm">
+
+          <!-- ============ UPI PANEL ============ -->
+          <div class="payment-panel" id="panel-upi">
+
+            <!-- AUTO QR CODE BOX -->
+            <div class="qr-code-box">
+              <div class="qr-label">🔄 QR auto-generated for your exact order amount</div>
+
+              <div class="qr-img-wrap">
+                <img id="dynamicQR" src="" alt="UPI QR Code" style="width:100%;height:100%;object-fit:contain;opacity:0;" />
+                <div class="qr-loading" id="qrLoadingText">Loading QR...</div>
+              </div>
+
+              <div>
+                <span class="qr-amount-badge" id="qrAmountBadge" style="display:none;">₹--</span>
+              </div>
+
+              <div class="qr-upi-id">
+                UPI ID: <strong>ayantikmallick@fam</strong>
+              </div>
+              <div class="qr-note">Scan with Google Pay, PhonePe, Paytm, or any UPI app</div>
+            </div>
+
+            <!-- UPI APP SHORTCUTS -->
+            <div class="upi-apps">
+              <button type="button" class="upi-app-btn active">
+                <span style="font-size:28px;">🟢</span>
+                Google Pay
+              </button>
+              <button type="button" class="upi-app-btn">
+                <span style="font-size:28px;">💜</span>
+                PhonePe
+              </button>
+              <button type="button" class="upi-app-btn">
+                <span style="font-size:28px;">🔵</span>
+                Paytm
+              </button>
+              <button type="button" class="upi-app-btn">
+                <span style="font-size:28px;">🇮🇳</span>
+                BHIM UPI
+              </button>
+              <button type="button" class="upi-app-btn">
+                <span style="font-size:28px;">🟠</span>
+                Amazon Pay
+              </button>
+              <button type="button" class="upi-app-btn">
+                <span style="font-size:28px;">📲</span>
+                Other UPI
+              </button>
+            </div>
+
+            <!-- UPI ID COPY -->
+            <div class="upi-id-display">
+              <div>
+                <div class="upi-id-label">UPI ID – tap to copy</div>
+                <div class="upi-id-text" id="upiIdText">ayantikmallick@fam</div>
+              </div>
+              <button type="button" class="copy-btn" data-copy="upiIdText">Copy</button>
+            </div>
+
+            <!-- TXN ID INPUT -->
+            <div class="txn-box">
+              <p>✅ After payment, enter your UPI Transaction ID (UTR) below:</p>
+              <input type="text" id="txnInput" placeholder="e.g. 419876543210 (12-digit UTR)" />
+            </div>
+          </div>
+
+          <!-- ============ PAYPAL PANEL ============ -->
+          <div class="payment-panel" id="panel-paypal">
+            <div style="background:var(--bg-secondary);border:1px solid var(--border);border-radius:8px;padding:24px;text-align:center;margin-bottom:16px;">
+              <div style="font-size:48px;margin-bottom:10px;">🅿️</div>
+              <div style="font-size:16px;font-weight:600;margin-bottom:6px;">Pay via PayPal</div>
+              <div style="font-size:13px;color:var(--text-secondary);margin-bottom:16px;">Send as <strong>Friends &amp; Family</strong> (no fees) to:</div>
+              <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:6px;padding:12px;display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+                <!-- ====== REPLACE WITH YOUR PAYPAL EMAIL ====== -->
+                <span style="font-family:monospace;font-size:15px;" id="paypalEmail">payments@gamifydeals.com</span>
+                <button type="button" class="copy-btn" data-copy="paypalEmail">Copy</button>
+              </div>
+              <a href="https://paypal.com/send" target="_blank" class="btn-primary" style="display:inline-block;padding:10px 24px;border-radius:6px;font-size:14px;">Open PayPal →</a>
+            </div>
+            <div class="txn-box">
+              <p>✅ Enter your PayPal Transaction ID:</p>
+              <input type="text" id="txnInput" placeholder="e.g. 8XW12345AB678901C" />
+            </div>
+          </div>
+
+          <!-- ============ CARD PANEL ============ -->
+          <div class="payment-panel" id="panel-card">
+            <div style="font-size:13px;color:var(--text-secondary);margin-bottom:16px;">💡 Card payments processed via secure payment gateway.</div>
+            <div class="form-group">
+              <label class="form-label">Card Number</label>
+              <input type="text" class="form-input" placeholder="1234 5678 9012 3456" maxlength="19" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Cardholder Name</label>
+              <input type="text" class="form-input" placeholder="Name on card" />
+            </div>
+            <div class="card-row">
+              <div class="form-group">
+                <label class="form-label">Expiry</label>
+                <input type="text" class="form-input" placeholder="MM / YY" maxlength="7" />
+              </div>
+              <div class="form-group">
+                <label class="form-label">CVV</label>
+                <input type="password" class="form-input" placeholder="•••" maxlength="4" />
+              </div>
+            </div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
+              <span style="background:var(--bg-secondary);border:1px solid var(--border);padding:4px 10px;border-radius:4px;font-size:12px;color:var(--text-muted);">💳 Visa</span>
+              <span style="background:var(--bg-secondary);border:1px solid var(--border);padding:4px 10px;border-radius:4px;font-size:12px;color:var(--text-muted);">💳 Mastercard</span>
+              <span style="background:var(--bg-secondary);border:1px solid var(--border);padding:4px 10px;border-radius:4px;font-size:12px;color:var(--text-muted);">💳 RuPay</span>
+              <span style="background:var(--bg-secondary);border:1px solid var(--border);padding:4px 10px;border-radius:4px;font-size:12px;color:var(--text-muted);">💳 Amex</span>
+            </div>
+            <div style="background:rgba(46,196,182,0.08);border:1px solid rgba(46,196,182,0.2);border-radius:6px;padding:12px;font-size:12px;color:var(--green);">
+              🔒 Encrypted & secure. We do not store card details.
+            </div>
+            <!-- ====== INTEGRATE YOUR PAYMENT GATEWAY API HERE ====== -->
+          </div>
+
+          <!-- ============ CRYPTO PANEL ============ -->
+          <div class="payment-panel" id="panel-crypto">
+            <div style="font-size:13px;color:var(--text-secondary);margin-bottom:14px;">Select currency and send exact amount to wallet below.</div>
+            <div class="crypto-options">
+              <button type="button" class="crypto-btn" data-coin="btc"><span class="coin-icon">₿</span>Bitcoin</button>
+              <button type="button" class="crypto-btn" data-coin="usdt"><span class="coin-icon">💚</span>USDT</button>
+              <button type="button" class="crypto-btn" data-coin="eth"><span class="coin-icon">💎</span>Ethereum</button>
+              <button type="button" class="crypto-btn" data-coin="ltc"><span class="coin-icon">🌕</span>Litecoin</button>
+              <button type="button" class="crypto-btn" data-coin="bnb"><span class="coin-icon">🟡</span>BNB</button>
+              <button type="button" class="crypto-btn" data-coin="sol"><span class="coin-icon">🌈</span>Solana</button>
+            </div>
+            <div class="wallet-address">
+              <!-- ====== REPLACE WITH YOUR CRYPTO WALLET ADDRESSES ====== -->
+              <span class="wallet-text" id="cryptoWalletAddress">Select a cryptocurrency above</span>
+              <button type="button" class="copy-btn" data-copy="cryptoWalletAddress">Copy</button>
+            </div>
+            <div style="background:rgba(244,162,97,0.1);border:1px solid rgba(244,162,97,0.2);border-radius:6px;padding:12px;font-size:12px;color:var(--gold);margin-bottom:14px;">
+              ⚠️ Send <strong>exact amount</strong> on correct network. Wrong network = lost funds.
+            </div>
+            <div class="txn-box">
+              <p>✅ Enter transaction hash after sending:</p>
+              <input type="text" id="txnInput" placeholder="0x... or transaction hash" />
+            </div>
+          </div>
+
+          <!-- ============ BANK PANEL ============ -->
+          <div class="payment-panel" id="panel-bank">
+            <div style="background:var(--bg-secondary);border:1px solid var(--border);border-radius:8px;padding:20px;margin-bottom:16px;">
+              <div style="font-size:14px;font-weight:600;margin-bottom:14px;">🏦 Bank Account Details</div>
+              <div style="display:flex;flex-direction:column;gap:0;">
+                <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border);">
+                  <span style="font-size:13px;color:var(--text-muted);">Account Name</span>
+                  <!-- ====== REPLACE BELOW ====== -->
+                  <span style="font-size:13px;font-weight:500;">GamifyDeals</span>
+                </div>
+                <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border);">
+                  <span style="font-size:13px;color:var(--text-muted);">Account Number</span>
+                  <div style="display:flex;align-items:center;gap:8px;">
+                    <!-- ====== REPLACE BELOW ====== -->
+                    <span style="font-family:monospace;font-size:13px;" id="bankAccNum">XXXX XXXX XXXX</span>
+                    <button type="button" class="copy-btn" style="padding:3px 8px;font-size:11px;" data-copy="bankAccNum">Copy</button>
+                  </div>
+                </div>
+                <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border);">
+                  <span style="font-size:13px;color:var(--text-muted);">IFSC Code</span>
+                  <div style="display:flex;align-items:center;gap:8px;">
+                    <!-- ====== REPLACE BELOW ====== -->
+                    <span style="font-family:monospace;font-size:13px;" id="bankIFSC">XXXX0000000</span>
+                    <button type="button" class="copy-btn" style="padding:3px 8px;font-size:11px;" data-copy="bankIFSC">Copy</button>
+                  </div>
+                </div>
+                <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;">
+                  <span style="font-size:13px;color:var(--text-muted);">Bank Name</span>
+                  <!-- ====== REPLACE BELOW ====== -->
+                  <span style="font-size:13px;font-weight:500;">Your Bank Name</span>
+                </div>
+              </div>
+            </div>
+            <div class="txn-box">
+              <p>✅ Enter UTR / Reference Number after transfer:</p>
+              <input type="text" id="txnInput" placeholder="e.g. UTR123456789012" />
+            </div>
+          </div>
+
+          <!-- ============ RAZORPAY PANEL ============ -->
+          <div class="payment-panel" id="panel-razorpay">
+            <div style="background:var(--bg-secondary);border:1px solid var(--border);border-radius:8px;padding:28px;text-align:center;margin-bottom:16px;">
+              <div style="font-size:40px;margin-bottom:10px;">⚡</div>
+              <div style="font-size:16px;font-weight:600;margin-bottom:6px;">Pay with Razorpay</div>
+              <div style="font-size:13px;color:var(--text-secondary);margin-bottom:20px;">UPI · Cards · Net Banking · EMI · Wallets</div>
+
+              <!-- ====== RAZORPAY INTEGRATION POINT ====== -->
+              <!-- Replace button below with your Razorpay payment button -->
+              <button type="button" id="rzp-button" class="btn-primary" style="width:100%;padding:14px;font-size:16px;"
+                onclick="alert('Add your Razorpay key_id here and integrate the Razorpay checkout script.')">
+                Pay Securely with Razorpay ⚡
+              </button>
+              <!-- ====== END RAZORPAY ====== -->
+
+              <div style="display:flex;justify-content:center;gap:8px;margin-top:14px;flex-wrap:wrap;">
+                <span style="font-size:11px;color:var(--text-muted);padding:3px 8px;background:var(--bg-card);border:1px solid var(--border);border-radius:4px;">Visa</span>
+                <span style="font-size:11px;color:var(--text-muted);padding:3px 8px;background:var(--bg-card);border:1px solid var(--border);border-radius:4px;">Mastercard</span>
+                <span style="font-size:11px;color:var(--text-muted);padding:3px 8px;background:var(--bg-card);border:1px solid var(--border);border-radius:4px;">UPI</span>
+                <span style="font-size:11px;color:var(--text-muted);padding:3px 8px;background:var(--bg-card);border:1px solid var(--border);border-radius:4px;">Net Banking</span>
+                <span style="font-size:11px;color:var(--text-muted);padding:3px 8px;background:var(--bg-card);border:1px solid var(--border);border-radius:4px;">EMI</span>
+              </div>
+            </div>
+            <div style="font-size:11px;color:var(--text-muted);text-align:center;">Powered by Razorpay · SSL Secured</div>
+          </div>
+
+          <!-- SUBMIT -->
+          <button type="submit" class="btn-submit-payment">✅ I Have Paid – Confirm Order</button>
+        </form>
+
+        <div class="payment-secure">
+          <span>🔒</span>
+          <span>Credentials delivered via WhatsApp within 15–30 minutes after verification.</span>
+        </div>
+
+        <!-- WHATSAPP NOTE -->
+        <div style="background:rgba(37,211,102,0.08);border:1px solid rgba(37,211,102,0.2);border-radius:8px;padding:16px;margin-top:16px;display:flex;gap:12px;align-items:flex-start;">
+          <span style="font-size:22px;flex-shrink:0;">💬</span>
+          <div>
+            <div style="font-size:14px;font-weight:600;color:#25d366;margin-bottom:4px;">After Payment – WhatsApp Us</div>
+            <div style="font-size:13px;color:var(--text-secondary);">Send Transaction ID to <strong style="color:#25d366;">+91 79087 19976</strong>. We'll send Steam credentials within minutes.</div>
+            <a href="https://wa.me/917908719976" target="_blank"
+              style="display:inline-flex;align-items:center;gap:6px;background:#25d366;color:#fff;padding:7px 16px;border-radius:5px;font-size:13px;font-weight:600;margin-top:10px;text-decoration:none;">
+              Open WhatsApp →
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT: ORDER SUMMARY -->
+      <div class="order-summary">
+        <h3>Order Summary</h3>
+
+        <!-- Cart items or single game -->
+        <div id="orderItemsList">
+          <div class="order-item">
+            <div class="order-item-img" style="display:flex;align-items:center;justify-content:center;font-size:20px;background:var(--bg-secondary);">🎮</div>
+            <div>
+              <div class="order-item-name" id="orderGameName">Selected Game</div>
+              <div class="order-item-detail">Shared Steam · Offline Mode</div>
+            </div>
+            <div class="order-item-price order-game-price">₹--</div>
+          </div>
+        </div>
+
+        <div class="order-line"><span>Game Price</span><span class="order-game-price">₹--</span></div>
+        <div class="order-line"><span>Delivery</span><span style="color:var(--green);">FREE</span></div>
+        <div class="order-line"><span>Platform Fee</span><span style="color:var(--green);">FREE</span></div>
+
+        <div class="order-total">
+          <span>Total</span>
+          <span class="order-total-price order-game-price" id="orderTotalAmt">₹--</span>
+        </div>
+
+        <div class="order-badges">
+          <div class="order-badge"><span>✅</span> Lifetime Warranty Included</div>
+          <div class="order-badge"><span>⚡</span> Delivery in 15–30 Minutes</div>
+          <div class="order-badge"><span>🔒</span> Steam Username + Password</div>
+          <div class="order-badge"><span>🛡️</span> Free Replacement if Account Fails</div>
+          <div class="order-badge"><span>🎮</span> Play in Steam Offline Mode</div>
+        </div>
+
+        <div style="margin-top:18px;padding-top:16px;border-top:1px solid var(--border);">
+          <div style="font-size:13px;font-weight:600;margin-bottom:10px;">Need Help?</div>
+          <a href="https://wa.me/917908719976" target="_blank" style="display:flex;align-items:center;gap:8px;font-size:13px;color:#25d366;margin-bottom:8px;">
+            💬 WhatsApp: +91 79087 19976
+          </a>
+          <a href="contact.html" style="font-size:13px;color:var(--accent);">📧 Contact Form →</a>
+        </div>
+      </div>
+
+    </div><!-- /.payment-layout -->
+  </div><!-- /#paymentFormPanel -->
+
+</div><!-- /.payment-page -->
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-inner">
+    <div class="footer-bottom">
+      <p>© 2024 GamifyDeals.com · UPI: ayantikmallick@fam · Instant Delivery</p>
+      <div class="footer-tags">
+        <span class="footer-tag">🔒 Secure</span>
+        <span class="footer-tag">⚡ Instant</span>
+        <span class="footer-tag">🛡️ Lifetime Warranty</span>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<script src="script.js"></script>
+</body>
+</html>

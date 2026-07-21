@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>GamifyDeals – First-Time Setup</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%23e63946'/><text y='.9em' font-size='70' x='15'>🎮</text></svg>"/>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Inter',-apple-system,sans-serif;background:#0d0f14;color:#e8eaf0;min-height:100vh;display:flex;align-items:center;justify-content:center}
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+    .setup-wrap{width:100%;max-width:440px;padding:20px}
+    .setup-logo{display:flex;align-items:center;gap:10px;justify-content:center;margin-bottom:32px}
+    .setup-logo img{height:48px;object-fit:contain}
+    .setup-logo span{font-size:24px;font-weight:700;letter-spacing:-.5px}
+    .setup-logo span em{color:#e63946;font-style:normal}
+    .setup-card{background:#1a1d28;border:1px solid #252836;border-radius:14px;padding:32px}
+    .setup-badge{display:inline-flex;align-items:center;gap:6px;background:rgba(46,196,182,.12);border:1px solid rgba(46,196,182,.3);color:#2ec4b6;font-size:11px;font-weight:600;padding:4px 12px;border-radius:20px;text-transform:uppercase;letter-spacing:.5px;margin-bottom:18px}
+    .setup-card h1{font-size:22px;font-weight:700;margin-bottom:6px}
+    .setup-card p{font-size:13px;color:#9ea3b5;margin-bottom:28px;line-height:1.6}
+    .form-group{margin-bottom:16px}
+    .form-group label{display:block;font-size:12px;font-weight:500;color:#9ea3b5;margin-bottom:6px}
+    .form-group input{width:100%;background:#13161e;border:1px solid #252836;color:#e8eaf0;padding:11px 14px;border-radius:8px;font-size:14px;transition:border-color .2s}
+    .form-group input:focus{outline:none;border-color:#e63946}
+    .form-group input::placeholder{color:#4b5563}
+    .hint{font-size:11px;color:#6b7280;margin-top:5px}
+    .btn-setup{width:100%;background:#e63946;color:#fff;border:none;padding:13px;border-radius:8px;font-size:15px;font-weight:600;cursor:pointer;transition:background .2s;margin-top:8px}
+    .btn-setup:hover{background:#ff4d5a}
+    .btn-setup:disabled{background:#4b5563;cursor:not-allowed}
+    .error-msg{background:rgba(230,57,70,.1);border:1px solid rgba(230,57,70,.3);color:#ff6b7a;padding:10px 14px;border-radius:8px;font-size:13px;margin-bottom:16px;display:none}
+    .success-msg{background:rgba(46,196,182,.1);border:1px solid rgba(46,196,182,.3);color:#2ec4b6;padding:10px 14px;border-radius:8px;font-size:13px;margin-bottom:16px;display:none}
+    .security-note{margin-top:20px;padding:14px;background:rgba(244,162,97,.08);border:1px solid rgba(244,162,97,.2);border-radius:8px;font-size:12px;color:#f4a261;line-height:1.6}
+    .spinner{display:inline-block;width:16px;height:16px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .6s linear infinite;vertical-align:middle;margin-right:6px}
+    @keyframes spin{to{transform:rotate(360deg)}}
+  </style>
+</head>
+<body>
+<div class="setup-wrap">
+  <div class="setup-logo">
+    <img src="/logo.png" alt="GamifyDeals" onerror="this.style.display='none'"/>
+    <span>Gamify<em>Deals</em></span>
+  </div>
+
+  <div class="setup-card">
+    <div class="setup-badge">🔒 First-Time Setup</div>
+    <h1>Create Owner Account</h1>
+    <p>Welcome to GamifyDeals Admin. Create your Owner account to get started. This page is permanently disabled after setup.</p>
+
+    <div class="error-msg" id="errMsg"></div>
+    <div class="success-msg" id="successMsg"></div>
+
+    <form id="setupForm">
+      <div class="form-group">
+        <label for="username">Username</label>
+        <input type="text" id="username" name="username" placeholder="e.g. admin" autocomplete="off" required/>
+        <div class="hint">Lowercase letters and numbers only. Used to log in.</div>
+      </div>
+      <div class="form-group">
+        <label for="password">Password</label>
+        <input type="password" id="password" name="password" placeholder="Minimum 8 characters" required/>
+      </div>
+      <div class="form-group">
+        <label for="confirm">Confirm Password</label>
+        <input type="password" id="confirm" name="confirm" placeholder="Re-enter password" required/>
+      </div>
+
+      <div class="security-note">
+        ⚠️ <strong>Save your credentials.</strong> There is no password reset — if you lose access, you will need direct database access to recover the account.
+      </div>
+
+      <button type="submit" class="btn-setup" id="setupBtn" style="margin-top:20px;">
+        Create Owner Account &amp; Continue →
+      </button>
+    </form>
+  </div>
+</div>
+
+<script>
+  // If setup is already done, redirect to admin
+  fetch('/api/auth/setup-status')
+    .then(r => r.json())
+    .then(d => { if (!d.setup_required) window.location.href = '/admin'; })
+    .catch(() => {});
+
+  document.getElementById('setupForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const errEl  = document.getElementById('errMsg');
+    const succEl = document.getElementById('successMsg');
+    const btn    = document.getElementById('setupBtn');
+    errEl.style.display  = 'none';
+    succEl.style.display = 'none';
+
+    const username = document.getElementById('username').value.trim();
+    const password = document.getElementById('password').value;
+    const confirm  = document.getElementById('confirm').value;
+
+    if (password !== confirm) {
+      errEl.textContent = 'Passwords do not match.';
+      errEl.style.display = 'block';
+      return;
+    }
+
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span>Creating account…';
+
+    try {
+      const res  = await fetch('/api/auth/setup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ username, password })
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        errEl.textContent   = data.error || 'Setup failed.';
+        errEl.style.display = 'block';
+        btn.disabled = false;
+        btn.textContent = 'Create Owner Account & Continue →';
+        return;
+      }
+
+      succEl.textContent   = `✅ Account created for "${data.admin.username}" (Owner). Redirecting to dashboard…`;
+      succEl.style.display = 'block';
+      setTimeout(() => window.location.href = '/admin', 1500);
+    } catch (err) {
+      errEl.textContent   = 'Network error. Is the server running?';
+      errEl.style.display = 'block';
+      btn.disabled = false;
+      btn.textContent = 'Create Owner Account & Continue →';
+    }
+  });
+</script>
+</body>
+</html>
