@@ -7,6 +7,13 @@
   <link rel="icon" href="/logo.png" type="image/png"/>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"/>
+
+  <!-- Firebase SDKs (v10 Compat) -->
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-analytics-compat.js"></script>
+  <script src="/firebase-config.js"></script>
+
   <style>
     *{box-sizing:border-box;margin:0;padding:0}
     body{font-family:'Inter',sans-serif;background:#0d0f14;color:#e8eaf0;min-height:100vh}
@@ -73,11 +80,17 @@
 
 <div class="page-wrap">
   <h1 class="page-title">📦 My Orders &amp; History</h1>
-  <p class="page-desc">Enter your email address to find all your past orders, status, and Steam account credentials.</p>
+  <p class="page-desc">Sign in or enter your email address to find all your past orders, status, and Steam account credentials.</p>
 
-  <!-- Email Search -->
+  <!-- Email Search / Firebase auto-detect -->
   <div class="search-card">
-    <label for="emailInput">Find Orders by Email</label>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+      <label for="emailInput" style="margin:0">Find Orders by Email</label>
+      <button onclick="signInWithGoogle().then(u => { if(u){ document.getElementById('emailInput').value = u.email; fetchOrders(u.email); } })"
+              style="background:none;border:1px solid #1f2333;color:#2ec4b6;padding:4px 10px;border-radius:6px;font-size:12px;cursor:pointer;font-weight:600">
+        🌐 Auto-fill via Google
+      </button>
+    </div>
     <div class="search-row">
       <input type="email" id="emailInput" placeholder="Enter your email (e.g. buyer@gmail.com)"/>
       <button class="search-btn" id="findBtn">Search Orders</button>
@@ -173,6 +186,14 @@
     }
   });
 
+  // Firebase Auth auto-detect
+  onAuthStateChange(user => {
+    if (user && user.email) {
+      document.getElementById('emailInput').value = user.email;
+      fetchOrders(user.email);
+    }
+  });
+
   // Auto-search if recent order exists in localStorage
   try {
     const hist = JSON.parse(localStorage.getItem('gd_my_orders') || '[]');
@@ -180,7 +201,7 @@
       fetch(`/api/orders/my/${hist[0].order_id}?token=${hist[0].view_token}`)
         .then(r => r.json())
         .then(data => {
-          if (data.buyer_email) {
+          if (data.buyer_email && !document.getElementById('emailInput').value) {
             document.getElementById('emailInput').value = data.buyer_email;
             fetchOrders(data.buyer_email);
           }

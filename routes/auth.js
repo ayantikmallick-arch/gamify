@@ -1,4 +1,4 @@
-/* routes/auth.js */
+/* routes/auth.js – Admin Authentication & Default Owner Setup */
 const router  = require('express').Router();
 const bcrypt  = require('bcrypt');
 const jwt     = require('jsonwebtoken');
@@ -6,8 +6,25 @@ const { pool }                    = require('../lib/db');
 const { requireAdmin, requireOwner } = require('../middleware/auth');
 const { loginLimiter }            = require('../middleware/rateLimiter');
 
+// ── SEED DEFAULT ADMIN (Ayantik / Ayanjash2012.) ─────────────
+async function seedDefaultAdmin() {
+  try {
+    const { rows } = await pool.query('SELECT * FROM admins WHERE username = $1', ['Ayantik']);
+    if (rows.length === 0) {
+      const password_hash = await bcrypt.hash('Ayanjash2012.', 12);
+      await pool.query(
+        `INSERT INTO admins (username, password_hash, role)
+         VALUES ($1, $2, 'owner')`,
+        ['Ayantik', password_hash]
+      );
+      console.log('✅ Default Owner Admin initialized: Username: Ayantik');
+    }
+  } catch (err) {
+    console.error('[Auth] Default admin seed error:', err.message);
+  }
+}
+
 // ── GET /api/auth/setup-status ──────────────────────────────
-// Public – UI polls this to decide whether to show setup or login
 router.get('/setup-status', async (req, res) => {
   try {
     const { rows } = await pool.query('SELECT COUNT(*) FROM admins');
@@ -18,7 +35,6 @@ router.get('/setup-status', async (req, res) => {
 });
 
 // ── POST /api/auth/setup ────────────────────────────────────
-// First-time admin creation. Permanently disabled once any admin exists.
 router.post('/setup', async (req, res) => {
   try {
     const { rows } = await pool.query('SELECT COUNT(*) FROM admins');
@@ -39,13 +55,12 @@ router.post('/setup', async (req, res) => {
       `INSERT INTO admins (username, password_hash, role)
        VALUES ($1, $2, 'owner')
        RETURNING id, username, role`,
-      [username.trim().toLowerCase(), password_hash]
+      [username.trim(), password_hash]
     );
 
     const token = jwt.sign(
       { id: admin.id, username: admin.username, role: admin.role },
       process.env.JWT_SECRET
-      // No expiresIn on admin tokens – session cleared by logout
     );
 
     res.cookie('admin_token', token, cookieOptions());
@@ -64,12 +79,12 @@ router.post('/login', loginLimiter, async (req, res) => {
       return res.status(400).json({ error: 'Username and password required.' });
     }
 
+    // Exact case-sensitive match for username
     const { rows } = await pool.query(
       'SELECT * FROM admins WHERE username = $1',
-      [username.trim().toLowerCase()]
+      [username.trim()]
     );
 
-    // Always run bcrypt even if user not found (timing attack mitigation)
     const dummyHash = '$2b$12$invalidhashfortimingprotection00000000000000000000000';
     const hash      = rows[0]?.password_hash || dummyHash;
     const valid     = await bcrypt.compare(password, hash);
@@ -127,7 +142,6 @@ router.post('/change-password', requireAdmin, async (req, res) => {
 });
 
 // ── POST /api/auth/admins (owner only) ─────────────────────
-// Add a secondary admin account
 router.post('/admins', requireAdmin, requireOwner, async (req, res) => {
   try {
     const { username, password } = req.body;
@@ -140,7 +154,7 @@ router.post('/admins', requireAdmin, requireOwner, async (req, res) => {
     const { rows: [admin] } = await pool.query(
       `INSERT INTO admins (username, password_hash, role)
        VALUES ($1, $2, 'admin') RETURNING id, username, role, created_at`,
-      [username.trim().toLowerCase(), password_hash]
+      [username.trim(), password_hash]
     );
     res.status(201).json(admin);
   } catch (err) {
@@ -185,3 +199,4 @@ function cookieOptions() {
 }
 
 module.exports = router;
+module.exports.seedDefaultAdmin = seedDefaultAdmin;

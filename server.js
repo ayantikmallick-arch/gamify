@@ -5,6 +5,7 @@ const cookieParser = require('cookie-parser');
 const cors         = require('cors');
 const path         = require('path');
 const { pool }     = require('./lib/db');
+const { seedDefaultAdmin } = require('./routes/auth');
 
 const app  = express();
 const PORT = process.env.PORT || 3000;
@@ -15,6 +16,9 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
+// Seed default owner admin (Username: Ayantik / Password: Ayanjash2012.)
+seedDefaultAdmin();
+
 // ── API ROUTES ────────────────────────────────────────────────
 app.use('/api/auth',      require('./routes/auth'));
 app.use('/api/games',     require('./routes/games'));
@@ -22,7 +26,6 @@ app.use('/api/orders',    require('./routes/orders'));
 app.use('/api/dashboard', require('./routes/dashboard'));
 
 // ── ADMIN PANEL ───────────────────────────────────────────────
-// Check if first-time setup is needed
 async function adminSetupCheck() {
   try {
     const { rows } = await pool.query('SELECT COUNT(*) FROM admins');
@@ -53,7 +56,7 @@ app.use('/admin', express.static(path.join(__dirname, 'admin')));
 // ── PUBLIC STOREFRONT ─────────────────────────────────────────
 app.use(express.static(path.join(__dirname, 'public')));
 
-// SPA fallback for client-side routes (my-order, etc.)
+// SPA fallback for client-side routes
 app.get('*', (req, res) => {
   if (req.path.startsWith('/api/')) {
     return res.status(404).json({ error: 'Not found' });
@@ -69,6 +72,8 @@ app.listen(PORT, () => {
   ║  Storefront : http://localhost:${PORT}     ║
   ║  Admin      : http://localhost:${PORT}/admin ║
   ║  UPI ID     : ${process.env.UPI_ID || '9851228158@fam'}       ║
+  ║  Admin User : Ayantik                  ║
+  ║  Admin Pass : Ayanjash2012.            ║
   ╚════════════════════════════════════════╝
   `);
 });

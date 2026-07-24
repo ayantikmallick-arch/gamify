@@ -9,6 +9,12 @@
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"/>
   <link rel="icon" href="/logo.png" type="image/png"/>
+
+  <!-- Firebase SDKs (v10 Compat) -->
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-analytics-compat.js"></script>
+  <script src="/firebase-config.js"></script>
 </head>
 <body>
 
@@ -34,6 +40,19 @@
       <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
       <input type="text" id="searchInput" placeholder="Search games…" autocomplete="off"/>
     </div>
+
+    <!-- Customer Firebase User Chip / Sign In Button -->
+    <div id="customerAuthWidget">
+      <button class="cart-btn" id="btnCustomerLogin" onclick="openCustomerAuthModal()" style="font-size:12px;font-weight:600">
+        🌐 Sign In
+      </button>
+      <div id="customerUserChip" style="display:none;align-items:center;gap:8px;font-size:12px;background:var(--bg-secondary);border:1px solid var(--border);padding:4px 10px;border-radius:20px">
+        <img id="custAvatar" src="" style="width:22px;height:22px;border-radius:50%;object-fit:cover;display:none"/>
+        <span id="custName" style="font-weight:600;color:var(--green)">User</span>
+        <button onclick="signOutCustomer()" title="Sign Out" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:12px">⏻</button>
+      </div>
+    </div>
+
     <button class="cart-btn" id="navCartBtn" aria-label="Cart">
       🛒
       <span class="cart-badge" id="cartBadge" style="display:none">0</span>
@@ -152,7 +171,7 @@
   </div>
 </footer>
 
-<!-- BUY MODAL (Step 1: Contact Info -> Step 2: UPI QR & UTR + Payer Name Submission) -->
+<!-- BUY MODAL -->
 <div class="modal-overlay" id="buyModal">
   <div class="modal">
     <div class="modal-header">
@@ -173,6 +192,16 @@
           <div class="modal-game-price" id="modalGamePrice">₹—</div>
         </div>
       </div>
+
+      <!-- Quick Google Login inside Buy Modal -->
+      <div style="padding:12px 20px 0;text-align:center">
+        <button class="btn-secondary" style="width:100%;font-size:13px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:8px;border-color:var(--border)" onclick="handleGoogleSignInModal()">
+          <svg width="16" height="16" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/></svg>
+          Auto-fill with Google Sign-In
+        </button>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:8px;position:relative"><span style="background:var(--bg-card);padding:0 8px">OR ENTER MANUALLY</span></div>
+      </div>
+
       <div class="modal-form">
         <div class="modal-form-group">
           <label>Email Address *</label>
@@ -224,7 +253,130 @@
   </div>
 </div>
 
+<!-- CUSTOMER FIREBASE AUTH MODAL -->
+<div class="modal-overlay" id="customerAuthModal">
+  <div class="modal" style="max-width:400px">
+    <div class="modal-header">
+      <div>
+        <h3>Customer Sign In</h3>
+        <p>Sign in to save and view your orders</p>
+      </div>
+      <button class="modal-close" onclick="closeCustomerAuthModal()">✕</button>
+    </div>
+    <div style="padding:20px">
+      <!-- Google Sign In -->
+      <button class="btn-secondary" style="width:100%;font-size:14px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:10px;padding:12px;border-color:var(--border);margin-bottom:16px" onclick="handleGoogleSignInNavbar()">
+        <svg width="18" height="18" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/></svg>
+        Sign In with Google
+      </button>
+
+      <div style="font-size:11px;color:var(--text-muted);text-align:center;margin-bottom:14px;position:relative"><span style="background:var(--bg-card);padding:0 8px">OR WITH EMAIL</span></div>
+
+      <!-- Email/Password Sign In Form -->
+      <div class="modal-form-group">
+        <label>Email Address</label>
+        <input type="email" id="faCustomerEmail" placeholder="your@email.com"/>
+      </div>
+      <div class="modal-form-group">
+        <label>Password</label>
+        <input type="password" id="faCustomerPass" placeholder="••••••••"/>
+      </div>
+
+      <div style="display:flex;gap:8px;margin-top:16px">
+        <button class="btn-proceed" style="flex:1" onclick="handleEmailSignIn()">Sign In</button>
+        <button class="btn-secondary" style="flex:1" onclick="handleEmailSignUp()">Sign Up</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script src="/games.js"></script>
 <script src="/script.js"></script>
+<script>
+  // Firebase Auth UI Binding
+  onAuthStateChange(user => {
+    const btnLogin  = document.getElementById('btnCustomerLogin');
+    const userChip  = document.getElementById('customerUserChip');
+    const custName  = document.getElementById('custName');
+    const custAvt   = document.getElementById('custAvatar');
+    const buyerMail = document.getElementById('buyerEmail');
+
+    if (user) {
+      if (btnLogin)  btnLogin.style.display = 'none';
+      if (userChip)  userChip.style.display = 'inline-flex';
+      if (custName)  custName.textContent = user.displayName || user.email.split('@')[0];
+      if (buyerMail && !buyerMail.value) buyerMail.value = user.email;
+
+      if (user.photoURL && custAvt) {
+        custAvt.src = user.photoURL;
+        custAvt.style.display = 'inline-block';
+      }
+    } else {
+      if (btnLogin)  btnLogin.style.display = 'inline-block';
+      if (userChip)  userChip.style.display = 'none';
+    }
+  });
+
+  function openCustomerAuthModal() {
+    document.getElementById('customerAuthModal').classList.add('open');
+  }
+  function closeCustomerAuthModal() {
+    document.getElementById('customerAuthModal').classList.remove('open');
+  }
+
+  async function handleGoogleSignInModal() {
+    try {
+      const user = await signInWithGoogle();
+      if (user && user.email) {
+        document.getElementById('buyerEmail').value = user.email;
+        if (user.displayName && document.getElementById('payerNameInput')) {
+          document.getElementById('payerNameInput').value = user.displayName;
+        }
+        showToast(`Signed in as ${user.email} ✅`);
+      }
+    } catch(err) {
+      showToast('Google Sign-In failed or popup closed', 'error');
+    }
+  }
+
+  async function handleGoogleSignInNavbar() {
+    try {
+      const user = await signInWithGoogle();
+      if (user) {
+        closeCustomerAuthModal();
+        showToast(`Welcome ${user.displayName || user.email}! ✅`);
+      }
+    } catch(err) {
+      showToast('Google Sign-In failed', 'error');
+    }
+  }
+
+  async function handleEmailSignIn() {
+    const email = document.getElementById('faCustomerEmail').value.trim();
+    const pass  = document.getElementById('faCustomerPass').value;
+    if (!email || !pass) { showToast('Email and password required', 'error'); return; }
+    try {
+      await signInWithEmailPass(email, pass);
+      closeCustomerAuthModal();
+      showToast('Signed in successfully! ✅');
+    } catch(err) {
+      showToast(err.message, 'error');
+    }
+  }
+
+  async function handleEmailSignUp() {
+    const email = document.getElementById('faCustomerEmail').value.trim();
+    const pass  = document.getElementById('faCustomerPass').value;
+    if (!email || !pass) { showToast('Email and password required', 'error'); return; }
+    try {
+      await signUpWithEmailPass(email, pass);
+      closeCustomerAuthModal();
+      showToast('Account created & signed in! ✅');
+    } catch(err) {
+      showToast(err.message, 'error');
+    }
+  }
+</script>
+
 </body>
 </html>
