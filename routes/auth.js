@@ -9,15 +9,15 @@ const { loginLimiter }            = require('../middleware/rateLimiter');
 // ── SEED DEFAULT ADMIN (Ayantik / Ayanjash2012.) ─────────────
 async function seedDefaultAdmin() {
   try {
-    const { rows } = await pool.query('SELECT * FROM admins WHERE username = $1', ['Ayantik']);
+    const { rows } = await pool.query('SELECT * FROM admins WHERE username IN ($1, $2)', ['Admin', 'Ayantik']);
     if (rows.length === 0) {
       const password_hash = await bcrypt.hash('Ayanjash2012.', 12);
       await pool.query(
         `INSERT INTO admins (username, password_hash, role)
          VALUES ($1, $2, 'owner')`,
-        ['Ayantik', password_hash]
+        ['Admin', password_hash]
       );
-      console.log('✅ Default Owner Admin initialized: Username: Ayantik');
+      console.log('✅ Default Owner Admin initialized: Username: Admin');
     }
   } catch (err) {
     console.error('[Auth] Default admin seed error:', err.message);

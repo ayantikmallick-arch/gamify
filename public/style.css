@@ -290,7 +290,11 @@ img { display: block; max-width: 100%; }
 .qr-img-container {
   display: inline-block; background: #ffffff; padding: 10px; border-radius: 12px; box-shadow: 0 4px 16px rgba(0,0,0,.4); margin-bottom: 12px;
 }
-.qr-img-container img { width: 180px; height: 180px; display: block; max-width: 100%; }
+.qr-img-container img {
+  width: 180px; height: 180px; display: block; max-width: 100%; margin: 0 auto;
+  image-rendering: pixelated; image-rendering: crisp-edges;
+  will-change: transform; transform: translateZ(0);
+}
 .upi-details { font-size: 13px; color: var(--text-2); display: flex; justify-content: center; gap: 16px; flex-wrap: wrap; }
 .btn-copy-small { background: rgba(255,255,255,.08); border: 1px solid var(--border); color: var(--text); font-size: 11px; padding: 2px 8px; border-radius: 4px; cursor: pointer; margin-left: 4px; }
 .utr-form-section { padding: 16px 20px; }

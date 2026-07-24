@@ -72,7 +72,7 @@ app.listen(PORT, () => {
   ║  Storefront : http://localhost:${PORT}     ║
   ║  Admin      : http://localhost:${PORT}/admin ║
   ║  UPI ID     : ${process.env.UPI_ID || '9851228158@fam'}       ║
-  ║  Admin User : Ayantik                  ║
+  ║  Admin User : Admin (or Ayantik)       ║
   ║  Admin Pass : Ayanjash2012.            ║
   ╚════════════════════════════════════════╝
   `);
