@@ -124,7 +124,7 @@ function openBuyModal({ id, name, price, genre, img }) {
   const m = document.getElementById('buyModal');
   if (!m) return;
 
-  document.getElementById('modalGameImg').src           = img;
+  document.getElementById('modalGameImg').src           = img || imgUrl(id);
   document.getElementById('modalGameName').textContent  = name;
   document.getElementById('modalGamePrice').textContent = `₹${price}`;
   document.getElementById('modalGenre').textContent     = genre;
@@ -247,7 +247,6 @@ async function handleSubmitUtr() {
       return;
     }
 
-    // Save order in customer local storage history
     try {
       const hist = JSON.parse(localStorage.getItem('gd_my_orders') || '[]');
       hist.unshift({
@@ -364,7 +363,7 @@ function openCartModal() {
   document.body.style.overflow = 'hidden';
 }
 
-// ── FILTERS / SEARCH ─────────────────────────────────────────
+// ── FILTERS / INSTANT AUTOCOMPLETE SEARCH ─────────────────────
 function initFilterBar() {
   document.querySelectorAll('.filter-btn').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -373,16 +372,86 @@ function initFilterBar() {
     });
   });
 }
+
 function initSearch() {
-  const handler = e => {
-    activeSearch = e.target.value.toLowerCase().trim();
-    document.querySelectorAll('#searchInput,#mobileSearchInput').forEach(i=>i.value=e.target.value);
+  const desktopSearch = document.getElementById('desktopSearch');
+  const mobileSearch  = document.getElementById('mobileSearchBar');
+
+  // Inject Autocomplete Dropdown Containers
+  if (desktopSearch && !document.getElementById('desktopSearchDropdown')) {
+    desktopSearch.insertAdjacentHTML('beforeend', '<div class="nav-search-dropdown" id="desktopSearchDropdown"></div>');
+  }
+  if (mobileSearch && !document.getElementById('mobileSearchDropdown')) {
+    mobileSearch.insertAdjacentHTML('beforeend', '<div class="nav-search-dropdown" id="mobileSearchDropdown" style="left:0;right:0;width:100%"></div>');
+  }
+
+  const handleInput = (e, dropdownId) => {
+    const q = e.target.value.toLowerCase().trim();
+    activeSearch = q;
     activeFilter = 'all';
     document.querySelectorAll('.filter-btn').forEach(b=>b.classList.toggle('active',b.dataset.filter==='all'));
-    currentPage = 1; renderGames(true);
+    currentPage = 1;
+    renderGames(true);
+
+    const dropdown = document.getElementById(dropdownId);
+    if (!dropdown) return;
+
+    if (!q) {
+      dropdown.style.display = 'none';
+      return;
+    }
+
+    const catalog = typeof GAMES_DATA !== 'undefined' ? GAMES_DATA : [];
+    const matches = catalog.filter(g => g.name.toLowerCase().includes(q)).slice(0, 15);
+
+    if (!matches.length) {
+      dropdown.innerHTML = `<div style="padding:12px;font-size:12px;color:var(--text-muted);text-align:center">No matching games found</div>`;
+      dropdown.style.display = 'block';
+      return;
+    }
+
+    dropdown.innerHTML = matches.map(g => `
+      <div class="search-dropdown-item" onclick="handleDropdownSelect(${g.id}, '${escH(g.name).replace(/'/g, "\\'")}', ${g.price}, '${escH(g.genre)}')">
+        <img src="${imgUrl(g.id)}" alt="${escH(g.name)}" onerror="this.src='${fallUrl(g.id)}'"/>
+        <div class="dropdown-item-info">
+          <div class="dropdown-item-title">${escH(g.name)}</div>
+          <div class="dropdown-item-genre">${escH(g.genre)} · ${escH(g.sub||'')}</div>
+        </div>
+        <div class="dropdown-item-price">₹${g.price}</div>
+      </div>
+    `).join('');
+
+    dropdown.style.display = 'block';
   };
-  document.getElementById('searchInput')?.addEventListener('input', handler);
-  document.getElementById('mobileSearchInput')?.addEventListener('input', handler);
+
+  const desktopInput = document.getElementById('searchInput');
+  const mobileInput  = document.getElementById('mobileSearchInput');
+
+  desktopInput?.addEventListener('input', e => handleInput(e, 'desktopSearchDropdown'));
+  mobileInput?.addEventListener('input', e => handleInput(e, 'mobileSearchDropdown'));
+
+  // Close dropdown on click outside
+  document.addEventListener('click', e => {
+    if (!e.target.closest('#desktopSearch')) {
+      const d = document.getElementById('desktopSearchDropdown');
+      if (d) d.style.display = 'none';
+    }
+    if (!e.target.closest('#mobileSearchBar')) {
+      const m = document.getElementById('mobileSearchDropdown');
+      if (m) m.style.display = 'none';
+    }
+  });
+}
+
+function handleDropdownSelect(id, name, price, genre) {
+  document.querySelectorAll('.nav-search-dropdown').forEach(d => d.style.display = 'none');
+  openBuyModal({
+    id,
+    name,
+    price,
+    genre,
+    img: imgUrl(id)
+  });
 }
 
 // ── MODAL INITIALIZATION ──────────────────────────────────────
