@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no"/>
   <title>GamifyDeals – Affordable Steam Games | Offline Play</title>
   <meta name="description" content="Get access to top Steam games at discounted prices. Steam accounts, offline play, lifetime replacement warranty."/>
   <link rel="stylesheet" href="/style.css"/>
@@ -29,6 +29,7 @@
   <div class="nav-links" id="navLinks">
     <a href="/">Home</a>
     <a href="#games">Games Catalog</a>
+    <a href="javascript:void(0)" onclick="openRequestGameModal()" style="color:var(--accent);font-weight:600">🎮 Request Game</a>
     <a href="/my-orders.html" style="color:var(--green);font-weight:600">📦 My Orders</a>
     <a href="#how-it-works">How It Works</a>
     <a href="/contact.html">Support</a>
@@ -36,8 +37,8 @@
 
   <!-- Right section -->
   <div class="nav-right">
-    <!-- Request Game Button -->
-    <button class="cart-btn" onclick="openRequestGameModal()" style="font-size:12px;font-weight:600;border-color:var(--accent);color:var(--accent)">
+    <!-- Request Game Button (Desktop only in top bar) -->
+    <button class="cart-btn desktop-only-btn" onclick="openRequestGameModal()" style="font-size:12px;font-weight:600;border-color:var(--accent);color:var(--accent)">
       🎮 Request Game
     </button>
 
@@ -51,10 +52,10 @@
       <button class="cart-btn" id="btnCustomerLogin" onclick="openCustomerAuthModal()" style="font-size:12px;font-weight:600">
         🌐 Sign In
       </button>
-      <div id="customerUserChip" style="display:none;align-items:center;gap:8px;font-size:12px;background:var(--bg-secondary);border:1px solid var(--border);padding:4px 10px;border-radius:20px">
-        <img id="custAvatar" src="" style="width:22px;height:22px;border-radius:50%;object-fit:cover;display:none"/>
-        <span id="custName" style="font-weight:600;color:var(--green)">User</span>
-        <button onclick="signOutCustomer()" title="Sign Out" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:12px">⏻</button>
+      <div id="customerUserChip" style="display:none;align-items:center;gap:6px;font-size:12px;background:var(--bg-secondary);border:1px solid var(--border);padding:4px 8px;border-radius:20px">
+        <img id="custAvatar" src="" style="width:20px;height:20px;border-radius:50%;object-fit:cover;display:none"/>
+        <span id="custName" class="cust-name-text" style="font-weight:600;color:var(--green)">User</span>
+        <button onclick="signOutCustomer()" title="Sign Out" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:12px;padding:0 2px">⏻</button>
       </div>
     </div>
 
