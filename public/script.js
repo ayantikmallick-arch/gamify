@@ -222,8 +222,8 @@ async function handleSubmitUtr() {
   const payerName = document.getElementById('payerNameInput')?.value.trim();
 
   const cleanUtr = utr ? utr.replace(/[\s-]/g, '') : '';
-  if (!cleanUtr || !/^[0-9]{12}$/.test(cleanUtr)) {
-    showToast('UPI UTR / Ref ID must be exactly 12 digits', 'error');
+  if (!cleanUtr || cleanUtr.length !== 12 || !/^\d{12}$/.test(cleanUtr)) {
+    showToast('Please enter your valid 12-digit UPI Transaction Ref / UTR ID to proceed.', 'error');
     return;
   }
 
