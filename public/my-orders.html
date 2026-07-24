@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>My Orders &amp; Purchase History – GamifyDeals</title>
+  <link rel="icon" href="/logo.png" type="image/png"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"/>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Inter',sans-serif;background:#0d0f14;color:#e8eaf0;min-height:100vh}
+    a{color:inherit;text-decoration:none}
+
+    .navbar{display:flex;align-items:center;justify-content:space-between;padding:0 24px;height:60px;background:#13161e;border-bottom:1px solid #1f2333;position:sticky;top:0;z-index:100}
+    .nav-logo{display:flex;align-items:center;gap:10px;font-size:18px;font-weight:700}
+    .nav-logo img{height:36px;object-fit:contain}
+    .nav-logo span em{color:#e63946;font-style:normal}
+    .nav-link{color:#9ea3b5;font-size:13px;font-weight:500;transition:color .15s}
+    .nav-link:hover{color:#e8eaf0}
+
+    .page-wrap{max-width:800px;margin:0 auto;padding:40px 20px}
+    .page-title{font-size:24px;font-weight:700;margin-bottom:8px}
+    .page-desc{font-size:14px;color:#6b7280;margin-bottom:28px}
+
+    /* Email Search Box */
+    .search-card{background:#13161e;border:1px solid #1f2333;border-radius:12px;padding:20px;margin-bottom:28px}
+    .search-card label{display:block;font-size:13px;font-weight:600;margin-bottom:8px;color:#e8eaf0}
+    .search-row{display:flex;gap:10px}
+    .search-row input{flex:1;background:#0d0f14;border:1px solid #1f2333;color:#e8eaf0;padding:12px 14px;border-radius:8px;font-size:14px}
+    .search-row input:focus{outline:none;border-color:#e63946}
+    .search-btn{background:#e63946;color:#fff;border:none;padding:12px 24px;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;transition:background .15s}
+    .search-btn:hover{background:#ff4d5a}
+
+    /* Orders List */
+    .orders-list{display:flex;flex-direction:column;gap:14px}
+    .order-item{background:#13161e;border:1px solid #1f2333;border-radius:12px;padding:20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;transition:border-color .15s}
+    .order-item:hover{border-color:#2d3148}
+    .order-left{display:flex;align-items:center;gap:16px}
+    .order-emoji{width:48px;height:48px;border-radius:10px;background:#1a1d28;display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0}
+    .order-title{font-size:15px;font-weight:600;margin-bottom:4px}
+    .order-meta-info{font-size:12px;color:#6b7280;display:flex;gap:12px;flex-wrap:wrap}
+    .order-right{text-align:right}
+    .order-amount{font-size:18px;font-weight:700;color:#e63946;margin-bottom:6px}
+
+    .badge{display:inline-flex;align-items:center;padding:4px 10px;border-radius:12px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.4px}
+    .badge-delivered{background:rgba(46,196,182,.12);color:#2ec4b6}
+    .badge-pending{background:rgba(244,162,97,.12);color:#f4a261}
+    .badge-rejected{background:rgba(230,57,70,.12);color:#e63946}
+
+    .btn-access{display:inline-block;background:rgba(230,57,70,.1);border:1px solid rgba(230,57,70,.3);color:#e63946;padding:8px 16px;border-radius:6px;font-size:13px;font-weight:600;transition:all .15s;margin-top:8px}
+    .btn-access:hover{background:#e63946;color:#fff}
+
+    .empty-history{text-align:center;padding:60px 20px;background:#13161e;border:1px solid #1f2333;border-radius:12px;color:#6b7280}
+    .empty-history .icon{font-size:40px;margin-bottom:12px}
+
+    @media(max-width:600px){
+      .search-row{flex-direction:column}
+      .order-item{flex-direction:column;align-items:flex-start}
+      .order-right{text-align:left;width:100%;border-top:1px solid #1f2333;padding-top:12px;margin-top:4px;display:flex;align-items:center;justify-content:space-between}
+    }
+  </style>
+</head>
+<body>
+
+<nav class="navbar">
+  <a href="/" class="nav-logo">
+    <img src="/logo.png" alt="GamifyDeals" onerror="this.style.display='none'"/>
+    <span>Gamify<em>Deals</em></span>
+  </a>
+  <a href="/" class="nav-link">← Browse Catalog</a>
+</nav>
+
+<div class="page-wrap">
+  <h1 class="page-title">📦 My Orders &amp; History</h1>
+  <p class="page-desc">Enter your email address to find all your past orders, status, and Steam account credentials.</p>
+
+  <!-- Email Search -->
+  <div class="search-card">
+    <label for="emailInput">Find Orders by Email</label>
+    <div class="search-row">
+      <input type="email" id="emailInput" placeholder="Enter your email (e.g. buyer@gmail.com)"/>
+      <button class="search-btn" id="findBtn">Search Orders</button>
+    </div>
+  </div>
+
+  <!-- Orders Container -->
+  <div class="orders-list" id="ordersContainer">
+    <div class="empty-history">
+      <div class="icon">🔍</div>
+      <p>Enter your email above to load your orders.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+  function fmtDate(iso) {
+    if (!iso) return '—';
+    return new Date(iso).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' });
+  }
+
+  function esc(s) {
+    return String(s || '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[m]);
+  }
+
+  async function fetchOrders(email) {
+    const container = document.getElementById('ordersContainer');
+    container.innerHTML = '<div class="empty-history"><p>Searching orders…</p></div>';
+
+    try {
+      const res = await fetch(`/api/orders/customer-history?email=${encodeURIComponent(email)}`);
+      const orders = await res.json();
+
+      if (!res.ok) {
+        container.innerHTML = `<div class="empty-history"><p style="color:#e63946">${orders.error || 'Failed to fetch orders'}</p></div>`;
+        return;
+      }
+
+      if (!orders.length) {
+        container.innerHTML = `
+          <div class="empty-history">
+            <div class="icon">📭</div>
+            <p>No orders found for <strong>${esc(email)}</strong>.</p>
+            <a href="/" style="color:#e63946;font-size:13px;display:inline-block;margin-top:10px">Browse Catalog →</a>
+          </div>`;
+        return;
+      }
+
+      container.innerHTML = orders.map(o => {
+        const isDelivered = o.status === 'delivered';
+        const isRejected  = o.status === 'rejected';
+        const badgeCls   = isDelivered ? 'badge-delivered' : (isRejected ? 'badge-rejected' : 'badge-pending');
+        const badgeLabel = isDelivered ? 'Delivered ✅' : (isRejected ? 'Failed ❌' : 'Pending Verification ⏳');
+
+        return `
+        <div class="order-item">
+          <div class="order-left">
+            <div class="order-emoji">${esc(o.emoji || '🎮')}</div>
+            <div>
+              <div class="order-title">${esc(o.game_name || 'Steam Game')}</div>
+              <div class="order-meta-info">
+                <span>📅 ${fmtDate(o.created_at)}</span>
+                ${o.utr_number ? `<span>UTR: <strong style="color:#2ec4b6">${esc(o.utr_number)}</strong></span>` : ''}
+              </div>
+            </div>
+          </div>
+          <div class="order-right">
+            <div class="order-amount">₹${parseFloat(o.amount).toFixed(2)}</div>
+            <div><span class="badge ${badgeCls}">${badgeLabel}</span></div>
+            <div>
+              <a href="/my-order.html?order_id=${o.id}&token=${o.view_token}" class="btn-access">
+                ${isDelivered ? '🔑 View Steam Credentials →' : '👁️ View Order Status →'}
+              </a>
+            </div>
+          </div>
+        </div>`;
+      }).join('');
+
+    } catch (err) {
+      container.innerHTML = '<div class="empty-history"><p style="color:#e63946">Network error. Please try again.</p></div>';
+    }
+  }
+
+  document.getElementById('findBtn').addEventListener('click', () => {
+    const email = document.getElementById('emailInput').value.trim();
+    if (email) fetchOrders(email);
+  });
+
+  document.getElementById('emailInput').addEventListener('keypress', e => {
+    if (e.key === 'Enter') {
+      const email = document.getElementById('emailInput').value.trim();
+      if (email) fetchOrders(email);
+    }
+  });
+
+  // Auto-search if recent order exists in localStorage
+  try {
+    const hist = JSON.parse(localStorage.getItem('gd_my_orders') || '[]');
+    if (hist.length > 0 && hist[0].order_id && hist[0].view_token) {
+      fetch(`/api/orders/my/${hist[0].order_id}?token=${hist[0].view_token}`)
+        .then(r => r.json())
+        .then(data => {
+          if (data.buyer_email) {
+            document.getElementById('emailInput').value = data.buyer_email;
+            fetchOrders(data.buyer_email);
+          }
+        }).catch(() => {});
+    }
+  } catch (e) {}
+</script>
+
+</body>
+</html>

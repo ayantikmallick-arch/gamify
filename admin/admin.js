@@ -256,7 +256,7 @@ async function renderGames() {
               <button class="btn btn-primary btn-xs" onclick="openGameAccountsModal(${g.id}, '${esc(g.name).replace(/'/g, "\\'")}')">🔑 Steam Slots</button>
               <button class="btn btn-danger btn-xs" onclick="deleteGame(${g.id})">Delete</button>
             </td>
-          </tr>`).join('') : '<tr><td colspan="5" class="muted" style="text-align:center;padding:30px">No games added to active database yet. Click "+ Add New Game" above to select games and add credentials!</td></tr>'}
+          </tr>`).join('') : '<tr><td colspan="5" class="muted" style="text-align:center;padding:30px">No games added to database yet. Click "+ Add New Game" above to select games and add credentials!</td></tr>'}
         </tbody>
       </table>
     </div>
@@ -277,14 +277,14 @@ function openAddGameAutomatedModal() {
 
   openModal('Add Game & Steam Credentials', `
     <div style="font-size:12px;color:#9ea3b5;margin-bottom:14px">
-      Type a game name below. Select any game from the website catalog to automatically load its Banner, Price, and Genre!
+      Type any game name (e.g. type "G" for GTA V, God of War, Ghost of Tsushima...). Select any game from the catalog to auto-fill its Banner, Price, and Genre!
     </div>
 
     <!-- Autocomplete Search Input -->
     <div class="form-group" style="position:relative">
       <label class="form-label">Search Game Name *</label>
-      <input class="form-input" id="autoGameSearch" placeholder="Type first letters (e.g. Grand Theft Auto, Red Dead, Cyberpunk...)" autocomplete="off"/>
-      <div id="autocompleteDropdown" style="position:absolute;top:100%;left:0;right:0;background:#1a1d28;border:1px solid #252836;border-radius:8px;max-height:180px;overflow-y:auto;z-index:99;display:none;"></div>
+      <input class="form-input" id="autoGameSearch" placeholder="Type single letter (e.g. G, R, C...) or game title" autocomplete="off"/>
+      <div id="autocompleteDropdown" style="position:absolute;top:100%;left:0;right:0;background:#1a1d28;border:1px solid #252836;border-radius:8px;max-height:220px;overflow-y:auto;z-index:99;display:none;"></div>
     </div>
 
     <!-- Auto-Filled Game Card Preview -->
@@ -316,7 +316,7 @@ function openAddGameAutomatedModal() {
     { label: 'Cancel', cls: 'btn-secondary', action: closeModal }
   ]);
 
-  // Attach Autocomplete Listener
+  // Attach Autocomplete Listener for single letters like "G"
   const searchInput = document.getElementById('autoGameSearch');
   const dropdown    = document.getElementById('autocompleteDropdown');
 
@@ -325,10 +325,11 @@ function openAddGameAutomatedModal() {
     if (!q) { dropdown.style.display = 'none'; return; }
 
     const catalog = typeof GAMES_DATA !== 'undefined' ? GAMES_DATA : [];
-    const matches = catalog.filter(g => g.name.toLowerCase().includes(q)).slice(0, 10);
+    // Instant match for any length (including single letters like 'g')
+    const matches = catalog.filter(g => g.name.toLowerCase().includes(q)).slice(0, 20);
 
     if (!matches.length) {
-      dropdown.innerHTML = `<div style="padding:10px;font-size:12px;color:#6b7280;text-align:center">Custom game name: "${esc(q)}"</div>`;
+      dropdown.innerHTML = `<div style="padding:10px;font-size:12px;color:#6b7280;text-align:center">Custom game title: "${esc(q)}"</div>`;
       dropdown.style.display = 'block';
       return;
     }
@@ -555,13 +556,14 @@ async function renderOrders() {
   <div class="card">
     <div class="table-wrap">
       <table>
-        <thead><tr><th>Customer Email</th><th>Game</th><th>Amount</th><th>Submitted UTR</th><th>Status</th><th>Date</th><th>Actions</th></tr></thead>
+        <thead><tr><th>Customer &amp; Payer Name</th><th>Game</th><th>Amount</th><th>Submitted UTR</th><th>Status</th><th>Date</th><th>Actions</th></tr></thead>
         <tbody>
           ${data.orders.length ? data.orders.map(o => `
           <tr>
             <td>
               <div class="td-name">${esc(o.buyer_email)}</div>
-              ${o.buyer_whatsapp ? `<div style="font-size:11px;color:#2ec4b6">WA: ${esc(o.buyer_whatsapp)}</div>` : ''}
+              ${o.buyer_name ? `<div style="font-size:11px;color:#2ec4b6">Payer: ${esc(o.buyer_name)}</div>` : ''}
+              ${o.buyer_whatsapp ? `<div style="font-size:11px;color:#9ea3b5">WA: ${esc(o.buyer_whatsapp)}</div>` : ''}
             </td>
             <td class="muted">${esc(o.emoji||'🎮')} ${esc(o.game_name||'—')}</td>
             <td><strong>₹${parseFloat(o.amount).toFixed(0)}</strong></td>
@@ -631,9 +633,9 @@ async function openOrderModal(id) {
       <div><div style="font-size:11px;color:#6b7280;margin-bottom:3px">STATUS</div><span class="badge badge-${statusColor(o.status)}">${statusLabel(o.status)}</span></div>
       <div><div style="font-size:11px;color:#6b7280;margin-bottom:3px">AMOUNT</div><strong style="color:#e63946">₹${parseFloat(o.amount).toFixed(2)}</strong></div>
       <div><div style="font-size:11px;color:#6b7280;margin-bottom:3px">SUBMITTED UTR</div><span class="td-mono" style="color:#2ec4b6;font-weight:700">${esc(o.utr_number||'—')}</span></div>
-      <div><div style="font-size:11px;color:#6b7280;margin-bottom:3px">CUSTOMER</div><span style="font-size:13px">${esc(o.buyer_email)}</span></div>
+      <div><div style="font-size:11px;color:#6b7280;margin-bottom:3px">PAYER NAME</div><span style="font-size:13px;color:#2ec4b6">${esc(o.buyer_name||'—')}</span></div>
+      <div><div style="font-size:11px;color:#6b7280;margin-bottom:3px">CUSTOMER EMAIL</div><span style="font-size:13px">${esc(o.buyer_email)}</span></div>
       <div><div style="font-size:11px;color:#6b7280;margin-bottom:3px">GAME</div><span style="font-size:13px">${esc(o.emoji||'🎮')} ${esc(o.game_name||'—')}</span></div>
-      <div><div style="font-size:11px;color:#6b7280;margin-bottom:3px">APPROVED BY</div><span style="font-size:12px">${esc(o.approved_by||'—')}</span></div>
     </div>
     <div style="font-size:11px;color:#6b7280;margin-bottom:8px">ORDER ID: <span class="td-mono">${o.id}</span></div>
     ${o.assigned_username ? `<div style="background:#0d0f14;border:1px solid #1f2333;border-radius:8px;padding:12px;font-family:monospace;font-size:13px;color:#2ec4b6">Assigned Steam Username: ${esc(o.assigned_username)}</div>` : ''}

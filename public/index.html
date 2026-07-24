@@ -23,6 +23,7 @@
   <div class="nav-links" id="navLinks">
     <a href="/">Home</a>
     <a href="#games">Games Catalog</a>
+    <a href="/my-orders.html" style="color:var(--green);font-weight:600">📦 My Orders</a>
     <a href="#how-it-works">How It Works</a>
     <a href="/contact.html">Support</a>
   </div>
@@ -50,7 +51,7 @@
   <p>Access popular Steam titles at affordable rates. Simple UPI QR payment, direct login credentials, and lifetime warranty.</p>
   <div class="hero-buttons">
     <a href="#games" class="btn-primary">Browse Catalog</a>
-    <a href="#how-it-works" class="btn-secondary">How It Works</a>
+    <a href="/my-orders.html" class="btn-secondary" style="border-color:var(--green);color:var(--green)">📦 Track My Orders</a>
   </div>
 </section>
 
@@ -66,7 +67,7 @@
   <div class="how-steps">
     <div class="how-step"><div class="step-number">01</div><h3>Select Game</h3><p>Choose any game from our catalog and click <strong>Buy Now</strong>.</p></div>
     <div class="how-step"><div class="step-number">02</div><h3>Scan UPI QR</h3><p>Scan the generated UPI QR Code using GPay, PhonePe, or Paytm to pay <strong>9851228158@fam</strong>.</p></div>
-    <div class="how-step"><div class="step-number">03</div><h3>Submit UTR / Ref No</h3><p>Enter the 12-digit UPI Transaction Ref ID (UTR) from your payment app.</p></div>
+    <div class="how-step"><div class="step-number">03</div><h3>Submit UTR &amp; Name</h3><p>Enter the 12-digit UPI Transaction Ref ID (UTR) and your Payer Account Name.</p></div>
     <div class="how-step"><div class="step-number">04</div><h3>Receive Access</h3><p>Once verified, reveal your Steam username &amp; password directly in your Order Access page.</p></div>
   </div>
 </section>
@@ -120,7 +121,7 @@
         <ul>
           <li><a href="/">Home</a></li>
           <li><a href="#games">Games Catalog</a></li>
-          <li><a href="#how-it-works">How It Works</a></li>
+          <li><a href="/my-orders.html">My Orders</a></li>
           <li><a href="/contact.html">Support</a></li>
         </ul>
       </div>
@@ -151,7 +152,7 @@
   </div>
 </footer>
 
-<!-- BUY MODAL (Step 1: Contact Info -> Step 2: UPI QR & UTR Submission) -->
+<!-- BUY MODAL (Step 1: Contact Info -> Step 2: UPI QR & UTR + Payer Name Submission) -->
 <div class="modal-overlay" id="buyModal">
   <div class="modal">
     <div class="modal-header">
@@ -189,7 +190,7 @@
       </div>
     </div>
 
-    <!-- Step 2 Form: Dynamic UPI QR Code & UTR Submission -->
+    <!-- Step 2 Form: Dynamic UPI QR Code & UTR + Payer Name Submission -->
     <div id="checkoutStep2" style="display:none;">
       <div class="upi-qr-box">
         <div class="upi-qr-title">Scan QR with GPay / PhonePe / Paytm</div>
@@ -203,9 +204,15 @@
       </div>
 
       <div class="utr-form-section">
-        <label for="utrInput"><strong>Enter 12-Digit UPI Ref / UTR Number *</strong></label>
-        <input type="text" id="utrInput" placeholder="e.g. 420198765432" maxlength="16"/>
-        <small>Open your UPI app payment receipt to copy the 12-digit UTR / Ref No.</small>
+        <div class="modal-form-group">
+          <label for="utrInput"><strong>12-Digit UPI Ref / UTR Number *</strong></label>
+          <input type="text" id="utrInput" placeholder="e.g. 420198765432" maxlength="16"/>
+        </div>
+        <div class="modal-form-group" style="margin-top:10px">
+          <label for="payerNameInput"><strong>Payer Name on UPI / Bank Account *</strong></label>
+          <input type="text" id="payerNameInput" placeholder="e.g. Ayantik Mallick" style="letter-spacing:normal;font-family:inherit;font-size:14px;color:var(--text)"/>
+          <small>Name associated with your GPay / PhonePe / Bank Account.</small>
+        </div>
       </div>
 
       <div class="modal-actions" style="margin-top:14px">

@@ -129,9 +129,9 @@ function openBuyModal({ id, name, price, genre, img }) {
   document.getElementById('modalGamePrice').textContent = `₹${price}`;
   document.getElementById('modalGenre').textContent     = genre;
 
-  m.dataset.gameId = id || '';
-  m.dataset.name   = name;
-  m.dataset.price  = price;
+  m.dataset.gameId   = id || '';
+  m.dataset.gameName = name;
+  m.dataset.price    = price;
 
   // Reset steps
   document.getElementById('checkoutStep1').style.display = 'block';
@@ -139,6 +139,7 @@ function openBuyModal({ id, name, price, genre, img }) {
   document.getElementById('modalTitle').textContent     = 'Complete Your Order';
   document.getElementById('modalSubtitle').textContent  = 'Step 1: Enter your contact details';
   document.getElementById('utrInput').value              = '';
+  if (document.getElementById('payerNameInput')) document.getElementById('payerNameInput').value = '';
 
   m.classList.add('open');
   document.body.style.overflow = 'hidden';
@@ -172,7 +173,8 @@ async function handleStep1Proceed() {
         buyer_email:    email,
         buyer_whatsapp: whatsapp || null,
         amount:         parseFloat(m.dataset.price),
-        game_id:        m.dataset.gameId ? parseInt(m.dataset.gameId) : null
+        game_id:        m.dataset.gameId ? parseInt(m.dataset.gameId) : null,
+        game_name:      m.dataset.gameName || null
       })
     });
 
@@ -193,8 +195,8 @@ async function handleStep1Proceed() {
 
     document.getElementById('checkoutStep1').style.display = 'none';
     document.getElementById('checkoutStep2').style.display = 'block';
-    document.getElementById('modalTitle').textContent     = 'Scan & Submit UTR';
-    document.getElementById('modalSubtitle').textContent  = 'Step 2: Pay via UPI & enter 12-digit Ref No';
+    document.getElementById('modalTitle').textContent     = 'Scan & Submit Payment Details';
+    document.getElementById('modalSubtitle').textContent  = 'Step 2: Pay via UPI & submit UTR + Payer Name';
 
     btn.disabled = false;
     btn.textContent = 'Generate UPI QR Code →';
@@ -213,7 +215,9 @@ async function handleSubmitUtr() {
     return;
   }
 
-  const utr = document.getElementById('utrInput')?.value.trim();
+  const utr       = document.getElementById('utrInput')?.value.trim();
+  const payerName = document.getElementById('payerNameInput')?.value.trim();
+
   if (!utr || utr.length < 8) {
     showToast('Please enter your valid 12-digit UPI UTR / Ref Number', 'error');
     return;
@@ -230,7 +234,8 @@ async function handleSubmitUtr() {
       body: JSON.stringify({
         order_id:   currentPendingOrder.order_id,
         token:      currentPendingOrder.view_token,
-        utr_number: utr
+        utr_number: utr,
+        payer_name: payerName || null
       })
     });
 
@@ -241,6 +246,17 @@ async function handleSubmitUtr() {
       btn.textContent = 'Submit Payment & Get Access →';
       return;
     }
+
+    // Save order in customer local storage history
+    try {
+      const hist = JSON.parse(localStorage.getItem('gd_my_orders') || '[]');
+      hist.unshift({
+        order_id:   data.order_id,
+        view_token: data.view_token,
+        date:       new Date().toISOString()
+      });
+      localStorage.setItem('gd_my_orders', JSON.stringify(hist.slice(0, 20)));
+    } catch (e) {}
 
     Cart.clear();
     closeModal();
@@ -333,15 +349,16 @@ function openCartModal() {
   document.getElementById('modalGameName').textContent  = `Cart (${Cart.count()} items)`;
   document.getElementById('modalGamePrice').textContent = `₹${Cart.total()}`;
   document.getElementById('modalGenre').textContent     = 'Multiple Games';
-  m.dataset.name   = Cart.items.map(i=>i.name).join(', ');
-  m.dataset.price  = Cart.total();
-  m.dataset.gameId = '';
+  m.dataset.gameName = Cart.items.map(i=>i.name).join(', ');
+  m.dataset.price    = Cart.total();
+  m.dataset.gameId   = '';
 
   document.getElementById('checkoutStep1').style.display = 'block';
   document.getElementById('checkoutStep2').style.display = 'none';
   document.getElementById('modalTitle').textContent     = 'Complete Your Order';
   document.getElementById('modalSubtitle').textContent  = 'Step 1: Enter your contact details';
   document.getElementById('utrInput').value              = '';
+  if (document.getElementById('payerNameInput')) document.getElementById('payerNameInput').value = '';
 
   m.classList.add('open');
   document.body.style.overflow = 'hidden';

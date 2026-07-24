@@ -26,44 +26,54 @@ function makeViewToken(order_id) {
   return jwt.sign({ order_id }, process.env.ORDER_TOKEN_SECRET);
 }
 
-// Helper to ensure a game exists in PostgreSQL before linking to orders
-async function ensureGameExists(gameId, amount) {
-  if (!gameId) return null;
+// Helper to ensure a game exists in PostgreSQL with its REAL CATALOG NAME
+async function ensureGameExists(gameId, amount, gameNameFromClient) {
+  if (!gameId && !gameNameFromClient) return null;
   const numericId = parseInt(gameId);
 
-  // Check if exists by ID or steam_app_id
-  const { rows: existing } = await pool.query(
-    'SELECT id FROM games WHERE id = $1 OR steam_app_id = $1',
-    [numericId]
-  );
+  // 1. Check if exists in DB by ID or steam_app_id
+  if (numericId && !isNaN(numericId)) {
+    const { rows: existing } = await pool.query(
+      'SELECT id, name FROM games WHERE id = $1 OR steam_app_id = $1',
+      [numericId]
+    );
 
-  if (existing.length > 0) {
-    return existing[0].id;
+    if (existing.length > 0) {
+      // If it's a generic "Game #..." entry, update its name if we have a real name
+      if (existing[0].name.startsWith('Game #') && gameNameFromClient) {
+        await pool.query('UPDATE games SET name = $1 WHERE id = $2', [gameNameFromClient.trim(), existing[0].id]);
+      }
+      return existing[0].id;
+    }
   }
 
-  // Create game entry automatically if missing
+  // 2. Check if exists by name
+  const finalName = gameNameFromClient?.trim() || `Game #${numericId || Date.now()}`;
+  const { rows: byName } = await pool.query('SELECT id FROM games WHERE LOWER(name) = LOWER($1)', [finalName]);
+  if (byName.length > 0) return byName[0].id;
+
+  // 3. Create game entry automatically with real name
   const { rows: [newGame] } = await pool.query(
     `INSERT INTO games (name, price, steam_app_id, active)
      VALUES ($1, $2, $3, TRUE)
      RETURNING id`,
-    [`Game #${numericId}`, parseFloat(amount), numericId]
+    [finalName, parseFloat(amount), numericId || null]
   );
 
   return newGame.id;
 }
 
 // ── POST /api/orders/create – public ───────────────────────
-// Creates order & generates dynamic UPI QR Code
 router.post('/create', orderCreateLimiter, async (req, res) => {
   try {
-    const { game_id, buyer_email, buyer_name, buyer_whatsapp, amount } = req.body;
+    const { game_id, game_name, buyer_email, buyer_name, buyer_whatsapp, amount } = req.body;
 
     if (!buyer_email || !amount || isNaN(parseFloat(amount))) {
       return res.status(400).json({ error: 'Valid buyer_email and amount are required.' });
     }
 
-    // Ensure foreign key exists in PostgreSQL
-    const validDbGameId = await ensureGameExists(game_id, amount);
+    // Ensure foreign key exists in PostgreSQL with real name
+    const validDbGameId = await ensureGameExists(game_id, amount, game_name);
 
     const { rows: [order] } = await pool.query(
       `INSERT INTO orders
@@ -105,10 +115,10 @@ router.post('/create', orderCreateLimiter, async (req, res) => {
 });
 
 // ── POST /api/orders/submit-utr – public ────────────────────
-// Customer submits 12-digit UPI UTR / Reference ID
+// Customer submits UTR & Payer Account Name
 router.post('/submit-utr', async (req, res) => {
   try {
-    const { order_id, token, utr_number } = req.body;
+    const { order_id, token, utr_number, payer_name } = req.body;
 
     if (!order_id || !utr_number || !utr_number.trim()) {
       return res.status(400).json({ error: 'order_id and 12-digit UTR number are required.' });
@@ -118,14 +128,16 @@ router.post('/submit-utr', async (req, res) => {
       return res.status(401).json({ error: 'Invalid order access token.' });
     }
 
-    const trimmedUtr = utr_number.trim();
+    const trimmedUtr   = utr_number.trim();
+    const trimmedPayer = payer_name ? payer_name.trim() : null;
 
     const { rows: [order] } = await pool.query(
       `UPDATE orders
-       SET utr_number = $1
-       WHERE id = $2
-       RETURNING id, buyer_email, amount, view_token`,
-      [trimmedUtr, order_id]
+       SET utr_number = $1,
+           buyer_name = COALESCE($2, buyer_name)
+       WHERE id = $3
+       RETURNING id, buyer_email, buyer_name, amount, view_token`,
+      [trimmedUtr, trimmedPayer, order_id]
     );
 
     if (!order) return res.status(404).json({ error: 'Order not found.' });
@@ -134,7 +146,7 @@ router.post('/submit-utr', async (req, res) => {
       order_id: order.id,
       action:   'order_created',
       actor:    order.buyer_email,
-      meta:     { utr_number: trimmedUtr, amount: order.amount }
+      meta:     { utr_number: trimmedUtr, payer_name: trimmedPayer, amount: order.amount }
     });
 
     res.json({
@@ -146,6 +158,34 @@ router.post('/submit-utr', async (req, res) => {
   } catch (err) {
     console.error('[Orders] Submit UTR error:', err);
     res.status(500).json({ error: 'Failed to submit UTR number.' });
+  }
+});
+
+// ── GET /api/orders/customer-history – customer order history by email
+router.get('/customer-history', async (req, res) => {
+  try {
+    const { email } = req.query;
+    if (!email || !email.trim()) {
+      return res.status(400).json({ error: 'Email parameter is required.' });
+    }
+
+    const cleanEmail = email.trim().toLowerCase();
+
+    const { rows } = await pool.query(
+      `SELECT o.id, o.buyer_email, o.buyer_name, o.amount, o.currency,
+              o.utr_number, o.status, o.created_at, o.approved_at, o.view_token,
+              g.name AS game_name, g.emoji, g.genre, g.steam_app_id
+       FROM orders o
+       LEFT JOIN games g ON g.id = o.game_id
+       WHERE LOWER(o.buyer_email) = $1
+       ORDER BY o.created_at DESC`,
+      [cleanEmail]
+    );
+
+    res.json(rows);
+  } catch (err) {
+    console.error('[Orders] Customer history error:', err);
+    res.status(500).json({ error: 'Failed to fetch order history.' });
   }
 });
 
@@ -339,7 +379,7 @@ router.post('/:id/approve', requireAdmin, async (req, res) => {
 
     if (!targetAccount) {
       return res.status(400).json({
-        error: 'No active Steam account slot found for this game. Please click "+ Add New Game" or "🔑 Steam Slots" in the Games tab to add a Steam username & password first.'
+        error: 'No active Steam account slot found for this game. Please click "+ Add New Game" in the Games tab to add a Steam username & password first.'
       });
     }
 
