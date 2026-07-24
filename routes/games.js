@@ -1,8 +1,9 @@
-/* routes/games.js – Game Catalog & Multi-Slot Steam Credentials Management */
+/* routes/games.js – Game Catalog, Game Requests & Multi-Slot Steam Credentials Management */
 const router = require('express').Router();
 const { pool }          = require('../lib/db');
 const { requireAdmin }   = require('../middleware/auth');
 const { encrypt, decrypt } = require('../lib/crypto');
+const { insertLog }      = require('../lib/auditLog');
 
 // ── GET /api/games – public storefront ─────────────────────
 router.get('/', async (req, res) => {
@@ -20,6 +21,29 @@ router.get('/', async (req, res) => {
   } catch (err) {
     console.error('[Games] List error:', err);
     res.status(500).json({ error: 'Failed to fetch games.' });
+  }
+});
+
+// ── POST /api/games/request-game – Public Game Request ──
+router.post('/request-game', async (req, res) => {
+  try {
+    const { game_title, email, whatsapp } = req.body;
+    if (!game_title || !game_title.trim()) {
+      return res.status(400).json({ error: 'Game title is required.' });
+    }
+    const cleanTitle = game_title.trim();
+    const cleanEmail = email ? email.trim() : 'Anonymous';
+
+    await insertLog({
+      action: 'game_requested',
+      actor:  cleanEmail,
+      meta:   { game_title: cleanTitle, whatsapp: whatsapp || null, time: new Date().toISOString() }
+    });
+
+    res.json({ success: true, message: `Your request for "${cleanTitle}" has been received!` });
+  } catch (err) {
+    console.error('[Games] Request game error:', err);
+    res.status(500).json({ error: 'Failed to submit game request.' });
   }
 });
 
@@ -64,13 +88,11 @@ router.post('/add-with-account', requireAdmin, async (req, res) => {
     const gameName = name.trim();
     let game = null;
 
-    // Check if game already exists in DB
     const { rows: existing } = await pool.query('SELECT * FROM games WHERE LOWER(name) = LOWER($1)', [gameName]);
 
     if (existing.length > 0) {
       game = existing[0];
     } else {
-      // Insert game into DB
       const { rows: [newGame] } = await pool.query(
         `INSERT INTO games (name, genre, sub_genre, steam_app_id, price, original_price, badge, emoji, description)
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
@@ -90,14 +112,10 @@ router.post('/add-with-account', requireAdmin, async (req, res) => {
       game = newGame;
     }
 
-    // Encrypt Steam Password
     const enc = encrypt(steam_password.trim());
-
-    // Count existing slots for slot naming if not specified
     const { rows: [{ count }] } = await pool.query('SELECT COUNT(*) FROM game_accounts WHERE game_id = $1', [game.id]);
     const defaultSlotName = slot_name?.trim() || `Slot ${parseInt(count) + 1}`;
 
-    // Insert Steam Account Slot
     const { rows: [account] } = await pool.query(
       `INSERT INTO game_accounts (game_id, slot_name, steam_username, steam_password_enc, steam_iv, steam_auth_tag)
        VALUES ($1, $2, $3, $4, $5, $6)

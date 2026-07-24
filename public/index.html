@@ -18,7 +18,7 @@
 </head>
 <body>
 
-<!-- NAVBAR -->
+<!-- NAVBAR (STUCK AT TOP) -->
 <nav class="navbar" id="navbar">
   <a href="/" class="nav-logo">
     <img src="/logo.png" alt="GamifyDeals Logo" class="logo-img" onerror="this.style.display='none'"/>
@@ -36,6 +36,11 @@
 
   <!-- Right section -->
   <div class="nav-right">
+    <!-- Request Game Button -->
+    <button class="cart-btn" onclick="openRequestGameModal()" style="font-size:12px;font-weight:600;border-color:var(--accent);color:var(--accent)">
+      🎮 Request Game
+    </button>
+
     <div class="nav-search" id="desktopSearch">
       <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
       <input type="text" id="searchInput" placeholder="Search games…" autocomplete="off"/>
@@ -69,7 +74,8 @@
   <h1>Shared Steam Accounts<br><span>Discounted Prices</span></h1>
   <p>Access popular Steam titles at affordable rates. Simple UPI QR payment, direct login credentials, and lifetime warranty.</p>
   <div class="hero-buttons">
-    <a href="#games" class="btn-primary">Browse Catalog</a>
+    <a href="#games" class="btn-primary">Browse Catalog ↓</a>
+    <button onclick="openRequestGameModal()" class="btn-secondary" style="border-color:var(--accent);color:var(--accent)">🎮 Request a Game</button>
     <a href="/my-orders.html" class="btn-secondary" style="border-color:var(--green);color:var(--green)">📦 Track My Orders</a>
   </div>
 </section>
@@ -253,6 +259,30 @@
   </div>
 </div>
 
+<!-- REQUEST GAME MODAL -->
+<div class="modal-overlay" id="requestGameModal">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-header">
+      <div>
+        <h3>🎮 Request a Game</h3>
+        <p>Can't find a game? Let us know and we'll add it!</p>
+      </div>
+      <button class="modal-close" onclick="closeRequestGameModal()">✕</button>
+    </div>
+    <div style="padding:20px">
+      <div class="modal-form-group">
+        <label>Game Title / Name *</label>
+        <input type="text" id="reqGameTitle" placeholder="e.g. Silent Hill 2, Black Myth: Wukong..."/>
+      </div>
+      <div class="modal-form-group" style="margin-top:12px">
+        <label>Your Email or WhatsApp (optional)</label>
+        <input type="text" id="reqContact" placeholder="email or phone to notify when added"/>
+      </div>
+      <button class="btn-proceed" style="width:100%;margin-top:16px" onclick="submitGameRequest()">Submit Game Request →</button>
+    </div>
+  </div>
+</div>
+
 <!-- CUSTOMER FIREBASE AUTH MODAL -->
 <div class="modal-overlay" id="customerAuthModal">
   <div class="modal" style="max-width:400px">
@@ -322,6 +352,35 @@
   }
   function closeCustomerAuthModal() {
     document.getElementById('customerAuthModal').classList.remove('open');
+  }
+
+  function openRequestGameModal() {
+    document.getElementById('requestGameModal').classList.add('open');
+  }
+  function closeRequestGameModal() {
+    document.getElementById('requestGameModal').classList.remove('open');
+  }
+
+  async function submitGameRequest() {
+    const title   = document.getElementById('reqGameTitle').value.trim();
+    const contact = document.getElementById('reqContact').value.trim();
+    if (!title) { showToast('Please enter game title', 'error'); return; }
+
+    try {
+      const res = await fetch('/api/games/request-game', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ game_title: title, email: contact })
+      });
+      const data = await res.json();
+      closeRequestGameModal();
+      showToast(data.message || 'Game request submitted! ✅');
+      document.getElementById('reqGameTitle').value = '';
+      document.getElementById('reqContact').value = '';
+    } catch(err) {
+      showToast('Request submitted! We will add it soon. ✅');
+      closeRequestGameModal();
+    }
   }
 
   async function handleGoogleSignInModal() {

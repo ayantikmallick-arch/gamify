@@ -224,3 +224,9 @@ const GAMES_DATA = [
   { id:627690,  name:"Injustice 2",                       genre:"Fighting", sub:"Superhero",     price:69,  orig:999,  badge:"",            emoji:"🦸" },
 
 ];
+
+// Filter out EA Sports / FIFA / EA FC games completely
+if (typeof GAMES_DATA !== 'undefined') {
+  GAMES_DATA = GAMES_DATA.filter(g => !/ea\s*sports|fifa|fc\s*2[45]|madden/i.test(g.name));
+}
+
