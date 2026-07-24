@@ -37,6 +37,11 @@
 
   <!-- Right section -->
   <div class="nav-right">
+    <!-- Mobile Search Icon Button -->
+    <button class="cart-btn mobile-search-btn" id="mobileSearchBtn" aria-label="Search" onclick="toggleMobileSearchHeader()">
+      🔍
+    </button>
+
     <!-- Request Game Button (Desktop only in top bar) -->
     <button class="cart-btn desktop-only-btn" onclick="openRequestGameModal()" style="font-size:12px;font-weight:600;border-color:var(--accent);color:var(--accent)">
       🎮 Request Game
@@ -68,6 +73,16 @@
     </button>
   </div>
 </nav>
+
+<!-- EXPANDABLE MOBILE SEARCH HEADER -->
+<div class="mobile-search-header" id="mobileSearchHeader" style="display:none">
+  <div class="mobile-search-inner">
+    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+    <input type="text" id="mobileHeaderSearchInput" placeholder="Search 200+ games (e.g. GTA, God of War)..." autocomplete="off"/>
+    <button class="close-search-btn" onclick="toggleMobileSearchHeader()">✕</button>
+  </div>
+  <div class="nav-search-dropdown" id="mobileHeaderSearchDropdown" style="position:static;width:100%;box-shadow:none;border-radius:0 0 10px 10px"></div>
+</div>
 
 <!-- HERO -->
 <section class="hero">
@@ -321,6 +336,16 @@
 <script src="/script.js"></script>
 <script>
   let loggedInUserEmail = null;
+
+  function toggleMobileSearchHeader() {
+    const hdr = document.getElementById('mobileSearchHeader');
+    if (!hdr) return;
+    const isHidden = hdr.style.display === 'none';
+    hdr.style.display = isHidden ? 'block' : 'none';
+    if (isHidden) {
+      document.getElementById('mobileHeaderSearchInput')?.focus();
+    }
+  }
 
   onAuthStateChange(user => {
     const btnLogin  = document.getElementById('btnCustomerLogin');

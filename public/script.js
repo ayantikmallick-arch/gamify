@@ -427,11 +427,13 @@ function initSearch() {
     dropdown.style.display = 'block';
   };
 
-  const desktopInput = document.getElementById('searchInput');
-  const mobileInput  = document.getElementById('mobileSearchInput');
+  const desktopInput      = document.getElementById('searchInput');
+  const mobileInput       = document.getElementById('mobileSearchInput');
+  const mobileHeaderInput = document.getElementById('mobileHeaderSearchInput');
 
   desktopInput?.addEventListener('input', e => handleInput(e, 'desktopSearchDropdown'));
   mobileInput?.addEventListener('input', e => handleInput(e, 'mobileSearchDropdown'));
+  mobileHeaderInput?.addEventListener('input', e => handleInput(e, 'mobileHeaderSearchDropdown'));
 
   // Close dropdown on click outside
   document.addEventListener('click', e => {
