@@ -1,12 +1,45 @@
-/* routes/orders.js – Manual UPI QR Orders & Approval Workflow */
+/* routes/orders.js – Manual UPI QR Orders & Approval Workflow with Server-Side Price Verification */
 const router = require('express').Router();
 const jwt    = require('jsonwebtoken');
+const fs     = require('fs');
+const path   = require('path');
 const { pool }           = require('../lib/db');
 const { requireAdmin }   = require('../middleware/auth');
 const { decrypt }        = require('../lib/crypto');
 const { generateUpiUrl, generateQrDataUrl, getUpiConfig } = require('../lib/upi');
 const { insertLog }      = require('../lib/auditLog');
 const { orderCreateLimiter, revealLimiter } = require('../middleware/rateLimiter');
+
+// ── LOAD BACKEND CATALOG AS SOURCE OF TRUTH ──────────────────
+let BACKEND_GAMES_CATALOG = [];
+try {
+  const catalogCode = fs.readFileSync(path.join(__dirname, '../public/games.js'), 'utf8');
+  // Safely extract catalog
+  const match = catalogCode.match(/const\s+GAMES_DATA\s*=\s*(\[\s*[\s\S]*?\]);/);
+  if (match) {
+    BACKEND_GAMES_CATALOG = eval(match[1]);
+  }
+} catch (err) {
+  console.error('[Orders] Failed to load server games.js catalog:', err.message);
+}
+
+// Get Server-Side Official Price
+function getOfficialPrice(gameId, gameName) {
+  const numericId = parseInt(gameId);
+
+  if (numericId && !isNaN(numericId)) {
+    const found = BACKEND_GAMES_CATALOG.find(g => g.id === numericId);
+    if (found && found.price) return parseFloat(found.price);
+  }
+
+  if (gameName) {
+    const cleanName = gameName.trim().toLowerCase();
+    const found = BACKEND_GAMES_CATALOG.find(g => g.name.toLowerCase() === cleanName);
+    if (found && found.price) return parseFloat(found.price);
+  }
+
+  return null;
+}
 
 // ── HELPERS ──────────────────────────────────────────────────
 function getViewToken(req) {
@@ -26,22 +59,21 @@ function makeViewToken(order_id) {
   return jwt.sign({ order_id }, process.env.ORDER_TOKEN_SECRET);
 }
 
-// Helper to ensure a game exists in PostgreSQL with its REAL CATALOG NAME
-async function ensureGameExists(gameId, amount, gameNameFromClient) {
+// Helper to ensure a game exists in PostgreSQL with its REAL CATALOG NAME and OFFICIAL PRICE
+async function ensureGameExists(gameId, officialPrice, gameNameFromClient) {
   if (!gameId && !gameNameFromClient) return null;
   const numericId = parseInt(gameId);
 
   // 1. Check if exists in DB by ID or steam_app_id
   if (numericId && !isNaN(numericId)) {
     const { rows: existing } = await pool.query(
-      'SELECT id, name FROM games WHERE id = $1 OR steam_app_id = $1',
+      'SELECT id, name, price FROM games WHERE id = $1 OR steam_app_id = $1',
       [numericId]
     );
 
     if (existing.length > 0) {
-      // If it's a generic "Game #..." entry, update its name if we have a real name
       if (existing[0].name.startsWith('Game #') && gameNameFromClient) {
-        await pool.query('UPDATE games SET name = $1 WHERE id = $2', [gameNameFromClient.trim(), existing[0].id]);
+        await pool.query('UPDATE games SET name = $1, price = $2 WHERE id = $3', [gameNameFromClient.trim(), officialPrice, existing[0].id]);
       }
       return existing[0].id;
     }
@@ -52,28 +84,46 @@ async function ensureGameExists(gameId, amount, gameNameFromClient) {
   const { rows: byName } = await pool.query('SELECT id FROM games WHERE LOWER(name) = LOWER($1)', [finalName]);
   if (byName.length > 0) return byName[0].id;
 
-  // 3. Create game entry automatically with real name
+  // 3. Create game entry automatically with real name & official price
   const { rows: [newGame] } = await pool.query(
     `INSERT INTO games (name, price, steam_app_id, active)
      VALUES ($1, $2, $3, TRUE)
      RETURNING id`,
-    [finalName, parseFloat(amount), numericId || null]
+    [finalName, officialPrice, numericId || null]
   );
 
   return newGame.id;
 }
 
 // ── POST /api/orders/create – public ───────────────────────
+// SERVER-SIDE PRICE ENFORCEMENT (DevTools Tamper Proof)
 router.post('/create', orderCreateLimiter, async (req, res) => {
   try {
-    const { game_id, game_name, buyer_email, buyer_name, buyer_whatsapp, amount } = req.body;
+    const { game_id, game_name, buyer_email, buyer_name, buyer_whatsapp } = req.body;
 
-    if (!buyer_email || !amount || isNaN(parseFloat(amount))) {
-      return res.status(400).json({ error: 'Valid buyer_email and amount are required.' });
+    if (!buyer_email) {
+      return res.status(400).json({ error: 'Valid buyer_email is required.' });
     }
 
-    // Ensure foreign key exists in PostgreSQL with real name
-    const validDbGameId = await ensureGameExists(game_id, amount, game_name);
+    // 🛡️ SERVER-SIDE PRICE SECURITY:
+    // Determine official price from DB or Server Catalog (IGNORE ANY CLIENT SUBMITTED PRICE)
+    let officialPrice = getOfficialPrice(game_id, game_name);
+
+    if (!officialPrice) {
+      // Check database for existing game price
+      if (game_id) {
+        const { rows: [dbGame] } = await pool.query('SELECT price FROM games WHERE id = $1 OR steam_app_id = $1', [parseInt(game_id)]);
+        if (dbGame && dbGame.price) officialPrice = parseFloat(dbGame.price);
+      }
+    }
+
+    // Fallback standard price if game not found in catalog
+    if (!officialPrice || isNaN(officialPrice)) {
+      officialPrice = 149.00;
+    }
+
+    // Ensure foreign key exists in PostgreSQL with real name & official price
+    const validDbGameId = await ensureGameExists(game_id, officialPrice, game_name);
 
     const { rows: [order] } = await pool.query(
       `INSERT INTO orders
@@ -85,21 +135,22 @@ router.post('/create', orderCreateLimiter, async (req, res) => {
         buyer_name     ? buyer_name.trim()     : null,
         buyer_whatsapp ? buyer_whatsapp.trim() : null,
         validDbGameId,
-        parseFloat(amount)
+        officialPrice
       ]
     );
 
     const view_token = makeViewToken(order.id);
     await pool.query('UPDATE orders SET view_token = $1 WHERE id = $2', [view_token, order.id]);
 
-    const upiUrl   = generateUpiUrl({ amount, orderId: order.id });
+    // Generate UPI QR Code with OFFICIAL SERVER PRICE
+    const upiUrl   = generateUpiUrl({ amount: officialPrice, orderId: order.id });
     const qrDataUrl = await generateQrDataUrl(upiUrl);
     const upiConfig = getUpiConfig();
 
     res.json({
       order_id:       order.id,
       view_token,
-      amount:         parseFloat(amount),
+      amount:         officialPrice,
       currency:       'INR',
       upi_id:         upiConfig.upiId,
       upi_name:       upiConfig.upiName,
