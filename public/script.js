@@ -152,13 +152,16 @@ function closeModal() {
 
 // ── CHECKOUT FLOW ─────────────────────────────────────────────
 async function handleStep1Proceed() {
-  const m        = document.getElementById('buyModal');
-  const email    = document.getElementById('buyerEmail')?.value.trim();
+  const m = document.getElementById('buyModal');
+  let email = document.getElementById('buyerEmail')?.value.trim();
   const whatsapp = document.getElementById('buyerWhatsapp')?.value.trim();
 
   if (!email || !email.includes('@')) {
-    showToast('Please enter a valid email address', 'error');
-    return;
+    if (typeof loggedInUserEmail !== 'undefined' && loggedInUserEmail) {
+      email = loggedInUserEmail;
+    } else {
+      email = `buyer_${Date.now()}@gamifydeals.com`;
+    }
   }
 
   const btn = document.getElementById('proceedToPayBtn');

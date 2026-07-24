@@ -47,6 +47,29 @@ router.post('/request-game', async (req, res) => {
   }
 });
 
+// ── GET /api/games/admin/requests – List all Customer Game Requests ──
+router.get('/admin/requests', requireAdmin, async (req, res) => {
+  try {
+    const { rows } = await pool.query(
+      `SELECT id, action, actor, meta, created_at
+       FROM inventory_logs
+       WHERE action = 'game_requested'
+       ORDER BY created_at DESC`
+    );
+    const requests = rows.map(r => ({
+      id: r.id,
+      customer: r.actor,
+      game_title: r.meta?.game_title || 'Unknown Game',
+      whatsapp: r.meta?.whatsapp || null,
+      created_at: r.created_at
+    }));
+    res.json(requests);
+  } catch (err) {
+    console.error('[Games] Fetch requests error:', err);
+    res.status(500).json({ error: 'Failed to fetch game requests.' });
+  }
+});
+
 // ── GET /api/games/admin/list – admin panel ─────────────────
 router.get('/admin/list', requireAdmin, async (req, res) => {
   try {

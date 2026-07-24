@@ -113,6 +113,7 @@ function navigateTo(section) {
   const titles = {
     dashboard: 'Dashboard Overview',
     games:     'Games Catalog & Credentials',
+    requests:  'Customer Game Requests',
     orders:    'Orders & Payment Approvals',
     audit:     'Audit Log',
     team:      'Team',
@@ -125,6 +126,7 @@ function navigateTo(section) {
   const renders = {
     dashboard: renderDashboard,
     games:     renderGames,
+    requests:  renderRequests,
     orders:    renderOrders,
     audit:     renderAudit,
     team:      renderTeam,
@@ -267,6 +269,48 @@ async function renderGames() {
     clearTimeout(window._gsTimer);
     window._gsTimer = setTimeout(renderGames, 350);
   });
+}
+
+// ── CUSTOMER GAME REQUESTS ────────────────────────────────────
+async function renderRequests() {
+  const rows = await api('GET', '/api/games/admin/requests').catch(() => []);
+
+  setContent(`
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">Customer Game Requests</div>
+      <span class="muted" style="font-size:12px">${rows.length} request${rows.length !== 1 ? 's' : ''} received</span>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Requested Game Title</th><th>Customer Email / Contact</th><th>Date Requested</th><th>Actions</th></tr></thead>
+        <tbody>
+          ${rows.length ? rows.map(r => `
+          <tr>
+            <td class="td-name"><strong style="color:#e8eaf0">🎮 ${esc(r.game_title)}</strong></td>
+            <td class="muted">${esc(r.customer || 'Anonymous')} ${r.whatsapp ? `<br><small style="color:#25d366">📱 ${esc(r.whatsapp)}</small>` : ''}</td>
+            <td class="td-mono">${fmtDate(r.created_at)}</td>
+            <td>
+              <button class="btn btn-primary btn-xs" onclick="openAddGameAutomatedModalForTitle('${esc(r.game_title).replace(/'/g, "\\'")}')">
+                + Add Credentials for this Game
+              </button>
+            </td>
+          </tr>`).join('') : '<tr><td colspan="4" class="muted" style="text-align:center;padding:30px">No customer game requests yet.</td></tr>'}
+        </tbody>
+      </table>
+    </div>
+  </div>`);
+}
+
+function openAddGameAutomatedModalForTitle(title) {
+  openAddGameAutomatedModal();
+  setTimeout(() => {
+    const input = document.getElementById('autoGameSearch');
+    if (input) {
+      input.value = title;
+      input.dispatchEvent(new Event('input'));
+    }
+  }, 200);
 }
 
 // ── AUTOMATED GAME SELECTION & CREDENTIALS MODAL ─────────────
@@ -786,11 +830,13 @@ function setContent(html) {
 }
 
 function addTopbarBtn(label, action, cls = 'btn-primary') {
+  const container = document.getElementById('topbarActions');
+  if (container) container.innerHTML = '';
   const btn = document.createElement('button');
   btn.className   = `btn ${cls} btn-sm`;
   btn.textContent = label;
   btn.addEventListener('click', action);
-  document.getElementById('topbarActions').appendChild(btn);
+  if (container) container.appendChild(btn);
 }
 
 function openModal(title, bodyHtml, btns = []) {
