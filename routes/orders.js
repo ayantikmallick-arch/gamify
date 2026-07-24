@@ -172,7 +172,12 @@ router.post('/submit-utr', async (req, res) => {
     const { order_id, token, utr_number, payer_name } = req.body;
 
     if (!order_id || !utr_number || !utr_number.trim()) {
-      return res.status(400).json({ error: 'order_id and 12-digit UTR number are required.' });
+      return res.status(400).json({ error: 'order_id and UTR transaction reference number are required.' });
+    }
+
+    const cleanUtr = utr_number.trim().replace(/[\s-]/g, '');
+    if (cleanUtr.length < 12 || cleanUtr.length > 18 || !/^[a-zA-Z0-9]{12,18}$/.test(cleanUtr)) {
+      return res.status(400).json({ error: 'UPI Transaction Reference / UTR must be exactly 12 to 18 digits.' });
     }
 
     if (!token || !verifyViewToken(token, order_id)) {
