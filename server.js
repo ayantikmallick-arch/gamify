@@ -1,4 +1,4 @@
-/* server.js – GamifyDeals Express application */
+/* server.js – GamifyDeals Express Application */
 require('dotenv').config();
 const express      = require('express');
 const cookieParser = require('cookie-parser');
@@ -18,7 +18,6 @@ app.use(cookieParser());
 // ── API ROUTES ────────────────────────────────────────────────
 app.use('/api/auth',      require('./routes/auth'));
 app.use('/api/games',     require('./routes/games'));
-app.use('/api/inventory', require('./routes/inventory'));
 app.use('/api/orders',    require('./routes/orders'));
 app.use('/api/dashboard', require('./routes/dashboard'));
 
@@ -44,7 +43,6 @@ app.get('/admin', async (req, res) => {
 
 app.get('/admin/setup', async (req, res) => {
   const setupRequired = await adminSetupCheck();
-  // If setup already done → redirect to admin
   if (!setupRequired) return res.redirect('/admin');
   res.sendFile(path.join(__dirname, 'admin', 'setup.html'));
 });
@@ -57,7 +55,6 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 // SPA fallback for client-side routes (my-order, etc.)
 app.get('*', (req, res) => {
-  // Don't send index.html for API 404s
   if (req.path.startsWith('/api/')) {
     return res.status(404).json({ error: 'Not found' });
   }
@@ -71,6 +68,7 @@ app.listen(PORT, () => {
   ║  GamifyDeals is running!               ║
   ║  Storefront : http://localhost:${PORT}     ║
   ║  Admin      : http://localhost:${PORT}/admin ║
+  ║  UPI ID     : ${process.env.UPI_ID || '9851228158@fam'}       ║
   ╚════════════════════════════════════════╝
   `);
 });

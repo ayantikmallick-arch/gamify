@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>GamifyDeals Admin</title>
+  <title>GamifyDeals Admin Panel</title>
   <link rel="stylesheet" href="/admin/admin.css"/>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%23e63946'/><text y='.9em' font-size='70' x='15'>🎮</text></svg>"/>
 </head>
@@ -18,7 +18,7 @@
     </div>
     <div class="login-box">
       <h2>Admin Login</h2>
-      <p>Sign in to manage your game store</p>
+      <p>Sign in to manage games, orders &amp; approvals</p>
       <div class="login-err" id="loginErr"></div>
       <form id="loginForm">
         <div class="form-group">
@@ -43,7 +43,7 @@
       <img src="/logo.png" alt="GamifyDeals" onerror="this.style.display='none'"/>
       <div class="sidebar-logo-text">
         Gamify<em>Deals</em>
-        <small>Admin Panel</small>
+        <small>Admin Dashboard</small>
       </div>
     </div>
 
@@ -53,19 +53,16 @@
         <span class="nav-icon">📊</span> Dashboard
       </div>
 
-      <div class="nav-section-label">Store</div>
+      <div class="nav-section-label">Store Management</div>
       <div class="nav-item" data-section="games">
-        <span class="nav-icon">🎮</span> Games
-      </div>
-      <div class="nav-item" data-section="inventory">
-        <span class="nav-icon">📦</span> Inventory
+        <span class="nav-icon">🎮</span> Games &amp; Steam Slots
       </div>
       <div class="nav-item" data-section="orders">
-        <span class="nav-icon">🛒</span> Orders
+        <span class="nav-icon">🛒</span> Orders &amp; Approvals
         <span class="nav-badge" id="pendingBadge" style="display:none">0</span>
       </div>
 
-      <div class="nav-section-label">Logs</div>
+      <div class="nav-section-label">Logs &amp; System</div>
       <div class="nav-item" data-section="audit">
         <span class="nav-icon">📋</span> Audit Log
       </div>
@@ -94,7 +91,7 @@
   <!-- MAIN -->
   <div class="main">
     <div class="topbar">
-      <div class="topbar-title" id="topbarTitle">Dashboard</div>
+      <div class="topbar-title" id="topbarTitle">Dashboard Overview</div>
       <div class="topbar-actions" id="topbarActions"></div>
     </div>
     <div class="content" id="mainContent">

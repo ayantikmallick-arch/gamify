@@ -1,4 +1,4 @@
-/* routes/dashboard.js */
+/* routes/dashboard.js – Stats & Live Notification Feed */
 const router = require('express').Router();
 const { pool }        = require('../lib/db');
 const { requireAdmin } = require('../middleware/auth');
@@ -6,32 +6,25 @@ const { requireAdmin } = require('../middleware/auth');
 // ── GET /api/dashboard/stats ────────────────────────────────
 router.get('/stats', requireAdmin, async (req, res) => {
   try {
-    const [revenue, ordersToday, inventorySummary, recentOrders, topGames] = await Promise.all([
+    const [revenue, ordersStats, recentOrders, topGames] = await Promise.all([
 
       pool.query(`
         SELECT
           COALESCE(SUM(amount), 0)                                              AS total_revenue,
-          COALESCE(SUM(amount) FILTER (WHERE paid_at > NOW() - INTERVAL '7 days'), 0) AS revenue_7d,
-          COALESCE(SUM(amount) FILTER (WHERE paid_at > NOW() - INTERVAL '30 days'), 0) AS revenue_30d,
-          COUNT(*) FILTER (WHERE status = 'paid')                               AS total_orders,
-          COUNT(*) FILTER (WHERE status = 'paid' AND paid_at > NOW() - INTERVAL '24 hours') AS orders_today
+          COALESCE(SUM(amount) FILTER (WHERE approved_at > NOW() - INTERVAL '7 days'), 0) AS revenue_7d,
+          COALESCE(SUM(amount) FILTER (WHERE approved_at > NOW() - INTERVAL '30 days'), 0) AS revenue_30d,
+          COUNT(*) FILTER (WHERE status = 'delivered')                          AS total_orders,
+          COUNT(*) FILTER (WHERE status = 'pending_approval')                   AS pending_approval
         FROM orders`),
 
       pool.query(`
-        SELECT COUNT(*) FILTER (WHERE status = 'paid'   AND paid_at > NOW() - INTERVAL '24 hours') AS today,
-               COUNT(*) FILTER (WHERE status = 'pending')                                          AS pending,
-               COUNT(*) FILTER (WHERE status = 'failed')                                           AS failed
+        SELECT COUNT(*) FILTER (WHERE status = 'delivered')                            AS delivered,
+               COUNT(*) FILTER (WHERE status = 'pending_approval')                     AS pending,
+               COUNT(*) FILTER (WHERE status = 'rejected')                             AS rejected
         FROM orders`),
 
       pool.query(`
-        SELECT
-          COUNT(*) FILTER (WHERE status = 'available') AS available,
-          COUNT(*) FILTER (WHERE status = 'sold')      AS sold,
-          COUNT(*)                                      AS total
-        FROM inventory`),
-
-      pool.query(`
-        SELECT o.id, o.buyer_email, o.amount, o.status, o.created_at, o.paid_at,
+        SELECT o.id, o.buyer_email, o.amount, o.utr_number, o.status, o.created_at, o.approved_at,
                g.name AS game_name, g.emoji
         FROM orders o
         LEFT JOIN games g ON g.id = o.game_id
@@ -44,7 +37,7 @@ router.get('/stats', requireAdmin, async (req, res) => {
                SUM(o.amount)   AS revenue
         FROM orders o
         LEFT JOIN games g ON g.id = o.game_id
-        WHERE o.status = 'paid'
+        WHERE o.status = 'delivered'
         GROUP BY g.id, g.name, g.emoji
         ORDER BY order_count DESC
         LIMIT 5`)
@@ -52,8 +45,7 @@ router.get('/stats', requireAdmin, async (req, res) => {
 
     res.json({
       revenue:           revenue.rows[0],
-      order_stats:       ordersToday.rows[0],
-      inventory:         inventorySummary.rows[0],
+      order_stats:       ordersStats.rows[0],
       recent_orders:     recentOrders.rows,
       top_games:         topGames.rows
     });
@@ -80,10 +72,9 @@ router.get('/audit-log', requireAdmin, async (req, res) => {
     params.push(limit, offset);
 
     const { rows } = await pool.query(
-      `SELECT l.*, g.name AS game_name, i.steam_username
+      `SELECT l.*, g.name AS game_name
        FROM inventory_logs l
-       LEFT JOIN games     g ON g.id  = l.game_id
-       LEFT JOIN inventory i ON i.id  = l.inventory_id
+       LEFT JOIN games g ON g.id = l.game_id
        ${where}
        ORDER BY l.created_at DESC
        LIMIT $${params.length - 1} OFFSET $${params.length}`,

@@ -1,9 +1,10 @@
-/* public/script.js – GamifyDeals Storefront v4 (Razorpay Checkout) */
+/* public/script.js – Storefront & Manual UPI QR Checkout */
 
 const PAGE_SIZE = 40;
 let currentPage  = 1;
 let activeFilter = 'all';
 let activeSearch = '';
+let currentPendingOrder = null;
 
 // ── CART ──────────────────────────────────────────────────────
 const Cart = {
@@ -29,11 +30,11 @@ const Cart = {
 // ── GAME CARDS ────────────────────────────────────────────────
 function imgUrl(id) { return `https://cdn.cloudflare.steamstatic.com/steam/apps/${id}/library_600x900.jpg`; }
 function fallUrl(id) { return `https://cdn.cloudflare.steamstatic.com/steam/apps/${id}/header.jpg`; }
-function escH(s) { return String(s).replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[m]); }
+function escH(s) { return String(s || '').replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[m]); }
 
 function createCardHTML(g) {
   const disc = g.orig ? Math.round((1 - g.price/g.orig)*100) : 0;
-  const badgeHTML = g.badge ? `<span class="game-badge ${g.badge}">${{hot:'🔥 Hot',new:'✨ New',bestseller:'⭐ Best'}[g.badge]||g.badge}</span>` : '';
+  const badgeHTML = g.badge ? `<span class="game-badge ${g.badge}">${{hot:'🔥 Hot',new:'✨ New',bestseller:'⭐ Popular'}[g.badge]||g.badge}</span>` : '';
   return `
   <div class="game-card" data-id="${g.id}" data-name="${escH(g.name)}" data-price="${g.price}" data-genre="${escH(g.genre)}" data-emoji="${g.emoji||'🎮'}" data-appid="${g.id}">
     <img class="game-cover" src="${imgUrl(g.id)}" alt="${escH(g.name)}" loading="lazy"
@@ -50,7 +51,7 @@ function createCardHTML(g) {
         ${disc ? `<span class="discount-tag">-${disc}%</span>` : ''}
       </div>
       <div class="card-btns">
-        <a href="#" class="btn-buy">Buy Now</a>
+        <button class="btn-buy">Buy Now</button>
         <button class="btn-cart ${Cart.inCart(g.id)?'in-cart':''}">${Cart.inCart(g.id)?'✓':'🛒'}</button>
       </div>
     </div>
@@ -91,6 +92,7 @@ function attachCardListeners() {
       buy.addEventListener('click', e => {
         e.preventDefault();
         openBuyModal({
+          id:    card.dataset.id,
           name:  card.dataset.name,
           price: parseFloat(card.dataset.price),
           genre: card.dataset.genre,
@@ -117,20 +119,26 @@ function attachCardListeners() {
   });
 }
 
-// ── BUY MODAL (collect email → Razorpay) ─────────────────────
-function openBuyModal({ name, price, genre, img }) {
+// ── BUY MODAL (Step 1 -> Step 2 UPI QR) ──────────────────────
+function openBuyModal({ id, name, price, genre, img }) {
   const m = document.getElementById('buyModal');
   if (!m) return;
+
   document.getElementById('modalGameImg').src           = img;
   document.getElementById('modalGameName').textContent  = name;
   document.getElementById('modalGamePrice').textContent = `₹${price}`;
   document.getElementById('modalGenre').textContent     = genre;
 
-  // Store for checkout
-  m.dataset.name  = name;
-  m.dataset.price = price;
-  m.dataset.genre = genre;
-  m.dataset.img   = img;
+  m.dataset.gameId = id || '';
+  m.dataset.name   = name;
+  m.dataset.price  = price;
+
+  // Reset steps
+  document.getElementById('checkoutStep1').style.display = 'block';
+  document.getElementById('checkoutStep2').style.display = 'none';
+  document.getElementById('modalTitle').textContent     = 'Complete Your Order';
+  document.getElementById('modalSubtitle').textContent  = 'Step 1: Enter your contact details';
+  document.getElementById('utrInput').value              = '';
 
   m.classList.add('open');
   document.body.style.overflow = 'hidden';
@@ -141,75 +149,114 @@ function closeModal() {
   document.body.style.overflow = '';
 }
 
-// ── RAZORPAY CHECKOUT ─────────────────────────────────────────
-async function startCheckout({ name, price, email, whatsapp }) {
+// ── CHECKOUT FLOW ─────────────────────────────────────────────
+async function handleStep1Proceed() {
+  const m        = document.getElementById('buyModal');
+  const email    = document.getElementById('buyerEmail')?.value.trim();
+  const whatsapp = document.getElementById('buyerWhatsapp')?.value.trim();
+
+  if (!email || !email.includes('@')) {
+    showToast('Please enter a valid email address', 'error');
+    return;
+  }
+
+  const btn = document.getElementById('proceedToPayBtn');
+  btn.disabled = true;
+  btn.textContent = 'Generating UPI QR…';
+
   try {
-    const res  = await fetch('/api/orders/create', {
+    const res = await fetch('/api/orders/create', {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         buyer_email:    email,
         buyer_whatsapp: whatsapp || null,
-        amount:         price,
-        game_id:        null, // single game checkout; if you know game_id pass it
-        cart_items:     Cart.count() ? Cart.items : null
+        amount:         parseFloat(m.dataset.price),
+        game_id:        m.dataset.gameId ? parseInt(m.dataset.gameId) : null
       })
     });
-    const order = await res.json();
-    if (!res.ok) { showToast(order.error || 'Could not create order', 'error'); return; }
 
-    const options = {
-      key:          order.key_id,
-      amount:       order.amount,
-      currency:     order.currency || 'INR',
-      order_id:     order.rzp_order_id,
-      name:         'GamifyDeals',
-      description:  `Purchase: ${name}`,
-      image:        '/logo.png',
-      prefill:      { email, contact: whatsapp || '' },
-      theme:        { color: '#e63946' },
-      handler:      async function(response) {
-        await verifyPayment({ ...response, order_id: order.order_id });
-      },
-      modal: {
-        ondismiss: () => showToast('Payment cancelled', 'error')
-      }
-    };
+    const data = await res.json();
+    if (!res.ok) {
+      showToast(data.error || 'Failed to create order', 'error');
+      btn.disabled = false;
+      btn.textContent = 'Generate UPI QR Code →';
+      return;
+    }
 
-    const rzp = new Razorpay(options);
-    rzp.on('payment.failed', function(r) {
-      showToast('Payment failed: ' + (r.error?.description || 'Unknown error'), 'error');
-    });
-    rzp.open();
+    currentPendingOrder = data;
+
+    // Transition to Step 2
+    document.getElementById('upiQrImage').src               = data.qr_code_data_url;
+    document.getElementById('upiIdDisplay').textContent     = data.upi_id || '9851228158@fam';
+    document.getElementById('upiAmountDisplay').textContent = `₹${data.amount}`;
+
+    document.getElementById('checkoutStep1').style.display = 'none';
+    document.getElementById('checkoutStep2').style.display = 'block';
+    document.getElementById('modalTitle').textContent     = 'Scan & Submit UTR';
+    document.getElementById('modalSubtitle').textContent  = 'Step 2: Pay via UPI & enter 12-digit Ref No';
+
+    btn.disabled = false;
+    btn.textContent = 'Generate UPI QR Code →';
   } catch (err) {
-    console.error('Checkout error:', err);
-    showToast('Could not open payment. Please try again.', 'error');
+    console.error('Create order error:', err);
+    showToast('Network error. Is the server running?', 'error');
+    btn.disabled = false;
+    btn.textContent = 'Generate UPI QR Code →';
   }
 }
 
-async function verifyPayment({ razorpay_payment_id, razorpay_order_id, razorpay_signature, order_id }) {
-  showToast('Verifying payment…');
+async function handleSubmitUtr() {
+  if (!currentPendingOrder) {
+    showToast('Order session expired. Please start again.', 'error');
+    closeModal();
+    return;
+  }
+
+  const utr = document.getElementById('utrInput')?.value.trim();
+  if (!utr || utr.length < 8) {
+    showToast('Please enter your valid 12-digit UPI UTR / Ref Number', 'error');
+    return;
+  }
+
+  const btn = document.getElementById('submitUtrBtn');
+  btn.disabled = true;
+  btn.textContent = 'Submitting Payment…';
+
   try {
-    const res  = await fetch('/api/orders/verify', {
+    const res = await fetch('/api/orders/submit-utr', {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ razorpay_payment_id, razorpay_order_id, razorpay_signature, order_id })
+      body: JSON.stringify({
+        order_id:   currentPendingOrder.order_id,
+        token:      currentPendingOrder.view_token,
+        utr_number: utr
+      })
     });
-    const data = await res.json();
 
+    const data = await res.json();
     if (!res.ok || !data.success) {
-      showToast(data.error || 'Payment verification failed. Contact support.', 'error');
+      showToast(data.error || 'Failed to submit UTR. Try again.', 'error');
+      btn.disabled = false;
+      btn.textContent = 'Submit Payment & Get Access →';
       return;
     }
 
     Cart.clear();
     closeModal();
-
-    // Redirect to My Order page
-    window.location.href = data.redirect_url || `/my-order.html?order_id=${data.order_id}&token=${data.view_token}`;
+    window.location.href = data.redirect_url;
   } catch (err) {
-    showToast('Verification error. Contact WhatsApp support with your payment ID.', 'error');
+    showToast('Network error while submitting UTR.', 'error');
+    btn.disabled = false;
+    btn.textContent = 'Submit Payment & Get Access →';
   }
+}
+
+function copyUpiId() {
+  const upi = document.getElementById('upiIdDisplay').textContent;
+  navigator.clipboard.writeText(upi).then(() => {
+    showToast('UPI ID Copied: ' + upi);
+  });
 }
 
 // ── CART SIDEBAR ──────────────────────────────────────────────
@@ -219,19 +266,19 @@ function injectCartSidebar() {
   <div class="cart-overlay" id="cartOverlay">
     <div class="cart-panel">
       <div class="cart-header">
-        <div><h3>🛒 Cart</h3><div class="cart-count-label" id="cartCountLabel">0 items</div></div>
+        <div><h3>🛒 Shopping Cart</h3><div class="cart-count-label" id="cartCountLabel">0 items</div></div>
         <button class="close-cart-btn" id="closeCartBtn">✕</button>
       </div>
       <div id="cartBody" style="flex:1;overflow-y:auto;display:flex;flex-direction:column;"></div>
       <div class="cart-footer" id="cartFooter" style="display:none">
         <div class="cart-summary">
           <div class="cart-summary-row"><span>Subtotal</span><span id="cartSubtotal">₹0</span></div>
-          <div class="cart-summary-row"><span>Delivery</span><span style="color:var(--green)">FREE</span></div>
+          <div class="cart-summary-row"><span>Delivery</span><span style="color:var(--green)">Instant Access</span></div>
           <div class="cart-summary-row total"><span>Total</span><span class="price" id="cartTotalDisplay">₹0</span></div>
         </div>
-        <button class="cart-checkout-btn" id="cartCheckoutBtn">Pay Now →</button>
+        <button class="cart-checkout-btn" id="cartCheckoutBtn">Proceed to Checkout →</button>
         <button class="cart-clear-btn" id="cartClearBtn">🗑 Clear Cart</button>
-        <div class="cart-warranty-note"><span>🛡️</span> Lifetime warranty · Instant delivery</div>
+        <div class="cart-warranty-note"><span>🛡️</span> Lifetime Replacement Warranty</div>
       </div>
     </div>
   </div>`);
@@ -252,7 +299,7 @@ function renderCartItems() {
   if (!body) return;
   if (label) label.textContent = `${Cart.count()} item${Cart.count()!==1?'s':''}`;
   if (!Cart.count()) {
-    body.innerHTML = `<div class="cart-empty"><div class="empty-icon">🛒</div><p>Cart is empty</p><a href="#games">Browse games →</a></div>`;
+    body.innerHTML = `<div class="cart-empty"><div class="empty-icon">🛒</div><p>Your cart is empty</p><a href="#games">Browse catalog →</a></div>`;
     if (footer) footer.style.display = 'none';
     return;
   }
@@ -285,10 +332,17 @@ function openCartModal() {
   document.getElementById('modalGameImg').src           = '/logo.png';
   document.getElementById('modalGameName').textContent  = `Cart (${Cart.count()} items)`;
   document.getElementById('modalGamePrice').textContent = `₹${Cart.total()}`;
-  document.getElementById('modalGenre').textContent     = 'Multiple games';
-  m.dataset.name  = Cart.items.map(i=>i.name).join(', ');
-  m.dataset.price = Cart.total();
-  m.dataset.isCart = '1';
+  document.getElementById('modalGenre').textContent     = 'Multiple Games';
+  m.dataset.name   = Cart.items.map(i=>i.name).join(', ');
+  m.dataset.price  = Cart.total();
+  m.dataset.gameId = '';
+
+  document.getElementById('checkoutStep1').style.display = 'block';
+  document.getElementById('checkoutStep2').style.display = 'none';
+  document.getElementById('modalTitle').textContent     = 'Complete Your Order';
+  document.getElementById('modalSubtitle').textContent  = 'Step 1: Enter your contact details';
+  document.getElementById('utrInput').value              = '';
+
   m.classList.add('open');
   document.body.style.overflow = 'hidden';
 }
@@ -314,7 +368,7 @@ function initSearch() {
   document.getElementById('mobileSearchInput')?.addEventListener('input', handler);
 }
 
-// ── MODAL FORM SUBMIT ─────────────────────────────────────────
+// ── MODAL INITIALIZATION ──────────────────────────────────────
 function initModal() {
   const m = document.getElementById('buyModal');
   if (!m) return;
@@ -322,14 +376,13 @@ function initModal() {
   document.getElementById('closeModal')?.addEventListener('click',  closeModal);
   document.getElementById('cancelModal')?.addEventListener('click', closeModal);
 
-  document.getElementById('proceedBtn')?.addEventListener('click', () => {
-    const email    = document.getElementById('buyerEmail')?.value.trim();
-    const whatsapp = document.getElementById('buyerWhatsapp')?.value.trim();
-    if (!email || !email.includes('@')) { showToast('Enter a valid email', 'error'); return; }
-    const price = parseFloat(m.dataset.price);
-    const name  = m.dataset.name;
-    closeModal();
-    startCheckout({ name, price, email, whatsapp });
+  document.getElementById('proceedToPayBtn')?.addEventListener('click', handleStep1Proceed);
+  document.getElementById('submitUtrBtn')?.addEventListener('click', handleSubmitUtr);
+  document.getElementById('backToStep1Btn')?.addEventListener('click', () => {
+    document.getElementById('checkoutStep1').style.display = 'block';
+    document.getElementById('checkoutStep2').style.display = 'none';
+    document.getElementById('modalTitle').textContent     = 'Complete Your Order';
+    document.getElementById('modalSubtitle').textContent  = 'Step 1: Enter your contact details';
   });
 }
 
@@ -353,8 +406,6 @@ function showToast(msg, type='success') {
 }
 
 // ── INIT ──────────────────────────────────────────────────────
-function openFeaturedModal(name, price, genre, img) { openBuyModal({name, price: parseFloat(price.replace('₹','')), genre, img}); }
-
 document.addEventListener('DOMContentLoaded', () => {
   Cart.init();
   injectCartSidebar();

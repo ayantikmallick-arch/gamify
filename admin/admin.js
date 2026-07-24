@@ -1,13 +1,12 @@
-/* admin/admin.js – GamifyDeals Admin Panel SPA */
+/* admin/admin.js – GamifyDeals Admin Panel SPA (Manual UPI & Multi-Slot Steam Credentials) */
 
 // ── STATE ─────────────────────────────────────────────────────
 let adminUser   = null;
 let currentSec  = 'dashboard';
-let modalConfirm = null;
+let pollTimer   = null;
 
 // ── INIT ──────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
-  // Check if first-time setup needed
   fetch('/api/auth/setup-status').then(r => r.json()).then(d => {
     if (d.setup_required) { window.location.href = '/admin/setup'; return; }
     checkSession();
@@ -32,7 +31,6 @@ function showApp() {
   document.getElementById('loginScreen').style.display = 'none';
   document.getElementById('mainApp').style.display     = 'flex';
 
-  // Fill admin info
   document.getElementById('adminNameSidebar').textContent = adminUser.username;
   document.getElementById('adminRoleSidebar').textContent = adminUser.role;
   document.getElementById('adminAvatar').textContent      = adminUser.username[0].toUpperCase();
@@ -40,7 +38,6 @@ function showApp() {
     document.getElementById('teamNavItem').style.display = 'flex';
   }
 
-  // Nav
   document.querySelectorAll('.nav-item[data-section]').forEach(item => {
     item.addEventListener('click', () => navigateTo(item.dataset.section));
   });
@@ -51,6 +48,7 @@ function showApp() {
   });
 
   navigateTo('dashboard');
+  startLivePolling();
 }
 
 function showLogin() {
@@ -82,8 +80,30 @@ function showLogin() {
 }
 
 async function logout() {
+  if (pollTimer) clearInterval(pollTimer);
   await api('POST', '/api/auth/logout').catch(() => {});
   window.location.reload();
+}
+
+// Live Polling for New UTR Payment Notifications
+function startLivePolling() {
+  if (pollTimer) clearInterval(pollTimer);
+  pollTimer = setInterval(async () => {
+    try {
+      const data = await api('GET', '/api/orders?status=pending_approval');
+      const badge = document.getElementById('pendingBadge');
+      if (badge) {
+        if (data.pending_count > 0) {
+          badge.textContent   = data.pending_count;
+          badge.style.display = 'inline-block';
+        } else {
+          badge.style.display = 'none';
+        }
+      }
+    } catch (e) {
+      // silent polling catch
+    }
+  }, 10000);
 }
 
 // ── NAVIGATION ────────────────────────────────────────────────
@@ -91,9 +111,12 @@ function navigateTo(section) {
   currentSec = section;
   document.querySelectorAll('.nav-item').forEach(i => i.classList.toggle('active', i.dataset.section === section));
   const titles = {
-    dashboard: 'Dashboard',  games: 'Games',
-    inventory: 'Inventory',  orders: 'Orders',
-    audit: 'Audit Log',      team: 'Team',  settings: 'Settings'
+    dashboard: 'Dashboard Overview',
+    games:     'Games & Steam Account Slots',
+    orders:    'Orders & Payment Approvals',
+    audit:     'Audit Log',
+    team:      'Team',
+    settings:  'Settings'
   };
   document.getElementById('topbarTitle').textContent = titles[section] || section;
   document.getElementById('topbarActions').innerHTML = '';
@@ -102,7 +125,6 @@ function navigateTo(section) {
   const renders = {
     dashboard: renderDashboard,
     games:     renderGames,
-    inventory: renderInventory,
     orders:    renderOrders,
     audit:     renderAudit,
     team:      renderTeam,
@@ -114,29 +136,37 @@ function navigateTo(section) {
 // ── DASHBOARD ─────────────────────────────────────────────────
 async function renderDashboard() {
   const data = await api('GET', '/api/dashboard/stats').catch(() => null);
-  if (!data) { setContent('<div class="empty-state"><p>Failed to load stats.</p></div>'); return; }
+  if (!data) { setContent('<div class="empty-state"><p>Failed to load dashboard stats.</p></div>'); return; }
 
-  const r = data.revenue, o = data.order_stats, i = data.inventory;
+  const r = data.revenue, o = data.order_stats;
 
   setContent(`
+  ${r.pending_approval > 0 ? `
+  <div style="background:rgba(244,162,97,.12);border:1px solid rgba(244,162,97,.3);border-radius:10px;padding:14px 18px;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;">
+    <div style="color:#f4a261;font-size:14px;font-weight:600">
+      🔔 <strong>${r.pending_approval} Pending Payment${r.pending_approval > 1 ? 's' : ''}</strong> waiting for UTR verification!
+    </div>
+    <button class="btn btn-primary btn-sm" onclick="navigateTo('orders')">Review Orders →</button>
+  </div>` : ''}
+
   <div class="stats-grid">
     <div class="stat-card green">
       <div class="stat-icon">💰</div>
-      <div class="stat-label">Total Revenue</div>
+      <div class="stat-label">Verified Revenue</div>
       <div class="stat-value">₹${fmt(r.total_revenue)}</div>
       <div class="stat-sub">₹${fmt(r.revenue_7d)} last 7 days</div>
     </div>
+    <div class="stat-card gold">
+      <div class="stat-icon">⏳</div>
+      <div class="stat-label">Pending Approvals</div>
+      <div class="stat-value">${r.pending_approval}</div>
+      <div class="stat-sub">Requires admin UTR check</div>
+    </div>
     <div class="stat-card blue">
       <div class="stat-icon">🛒</div>
-      <div class="stat-label">Total Orders</div>
+      <div class="stat-label">Delivered Orders</div>
       <div class="stat-value">${r.total_orders}</div>
-      <div class="stat-sub">${o.today} today · ${o.pending} pending</div>
-    </div>
-    <div class="stat-card gold">
-      <div class="stat-icon">📦</div>
-      <div class="stat-label">Available Stock</div>
-      <div class="stat-value">${i.available}</div>
-      <div class="stat-sub">${i.sold} sold · ${i.total} total</div>
+      <div class="stat-sub">${o.delivered} delivered · ${o.rejected} rejected</div>
     </div>
     <div class="stat-card red">
       <div class="stat-icon">📅</div>
@@ -152,14 +182,14 @@ async function renderDashboard() {
       <div class="card-header"><div class="card-title">Recent Orders</div><a href="#" onclick="navigateTo('orders');return false;" style="font-size:12px;color:#e63946">View all →</a></div>
       <div class="table-wrap">
         <table>
-          <thead><tr><th>Customer</th><th>Game</th><th>Amount</th><th>Status</th></tr></thead>
+          <thead><tr><th>Customer</th><th>Game</th><th>UTR / Ref</th><th>Status</th></tr></thead>
           <tbody>
             ${data.recent_orders.length ? data.recent_orders.map(o => `
             <tr>
               <td class="td-name">${esc(o.buyer_email)}</td>
               <td class="muted">${esc(o.emoji || '🎮')} ${esc(o.game_name || '—')}</td>
-              <td>₹${parseFloat(o.amount).toFixed(0)}</td>
-              <td><span class="badge badge-${statusColor(o.status)}">${o.status}</span></td>
+              <td class="td-mono">${esc(o.utr_number || '—')}</td>
+              <td><span class="badge badge-${statusColor(o.status)}">${statusLabel(o.status)}</span></td>
             </tr>`).join('') : '<tr><td colspan="4" class="muted" style="text-align:center;padding:20px">No orders yet</td></tr>'}
           </tbody>
         </table>
@@ -168,10 +198,10 @@ async function renderDashboard() {
 
     <!-- Top Games -->
     <div class="card">
-      <div class="card-header"><div class="card-title">Top Games</div></div>
+      <div class="card-header"><div class="card-title">Top Selling Games</div></div>
       <div class="table-wrap">
         <table>
-          <thead><tr><th>Game</th><th>Orders</th><th>Revenue</th></tr></thead>
+          <thead><tr><th>Game</th><th>Delivered</th><th>Revenue</th></tr></thead>
           <tbody>
             ${data.top_games.length ? data.top_games.map(g => `
             <tr>
@@ -187,10 +217,10 @@ async function renderDashboard() {
   `);
 }
 
-// ── GAMES ─────────────────────────────────────────────────────
+// ── GAMES MANAGEMENT ──────────────────────────────────────────
 let gamesSearch = '';
 async function renderGames() {
-  addTopbarBtn('+ Add Game', () => openGameModal(null));
+  addTopbarBtn('+ Add New Game', () => openGameModal(null));
   const url  = gamesSearch ? `/api/games/admin/list?search=${encodeURIComponent(gamesSearch)}` : '/api/games/admin/list';
   const rows = await api('GET', url).catch(() => []);
 
@@ -198,13 +228,13 @@ async function renderGames() {
   <div class="toolbar">
     <div class="search-box">
       <span>🔍</span>
-      <input id="gamesSearchInput" placeholder="Search games…" value="${esc(gamesSearch)}"/>
+      <input id="gamesSearchInput" placeholder="Search games catalog…" value="${esc(gamesSearch)}"/>
     </div>
   </div>
   <div class="card">
     <div class="table-wrap">
       <table>
-        <thead><tr><th>Game</th><th>Genre</th><th>Price</th><th>Stock</th><th>Sold</th><th>Status</th><th>Actions</th></tr></thead>
+        <thead><tr><th>Game</th><th>Genre</th><th>Price</th><th>Active Account Slots</th><th>Status</th><th>Actions</th></tr></thead>
         <tbody id="gamesBody">
           ${rows.length ? rows.map(g => `
           <tr>
@@ -218,14 +248,14 @@ async function renderGames() {
             </td>
             <td class="muted">${esc(g.genre || '—')}</td>
             <td>₹${parseFloat(g.price).toFixed(0)}</td>
-            <td><span class="badge ${g.available_count > 0 ? 'badge-green' : 'badge-red'}">${g.available_count} avail</span></td>
-            <td class="muted">${g.sold_count}</td>
+            <td><span class="badge ${g.total_slots > 0 ? 'badge-green' : 'badge-gold'}">${g.total_slots} slot${g.total_slots!==1?'s':''} ready</span></td>
             <td><span class="badge ${g.active ? 'badge-green' : 'badge-gray'}">${g.active ? 'Active' : 'Hidden'}</span></td>
             <td>
+              <button class="btn btn-primary btn-xs" onclick="openGameAccountsModal(${g.id}, '${esc(g.name).replace(/'/g, "\\'")}')">🔑 Steam Slots</button>
               <button class="btn btn-ghost btn-xs" onclick="openGameModal(${g.id})">Edit</button>
               <button class="btn btn-danger btn-xs" onclick="deleteGame(${g.id})">Delete</button>
             </td>
-          </tr>`).join('') : '<tr><td colspan="7" class="muted" style="text-align:center;padding:30px">No games. Add one →</td></tr>'}
+          </tr>`).join('') : '<tr><td colspan="6" class="muted" style="text-align:center;padding:30px">No games. Click "+ Add New Game" above</td></tr>'}
         </tbody>
       </table>
     </div>
@@ -242,15 +272,15 @@ async function openGameModal(id) {
   let g = null;
   if (id) g = (await api('GET', `/api/games/admin/list`).catch(() => [])).find(x => x.id === id);
 
-  openModal(g ? 'Edit Game' : 'Add Game', `
+  openModal(g ? 'Edit Game' : 'Add New Game', `
     <div class="form-row">
       <div class="form-group">
         <label class="form-label">Game Name *</label>
-        <input class="form-input" id="fg-name" value="${esc(g?.name||'')}" placeholder="e.g. Red Dead Redemption 2"/>
+        <input class="form-input" id="fg-name" value="${esc(g?.name||'')}" placeholder="e.g. Grand Theft Auto V"/>
       </div>
       <div class="form-group">
         <label class="form-label">Steam App ID</label>
-        <input class="form-input" id="fg-appid" type="number" value="${g?.steam_app_id||''}" placeholder="e.g. 1174180"/>
+        <input class="form-input" id="fg-appid" type="number" value="${g?.steam_app_id||''}" placeholder="e.g. 271590"/>
       </div>
     </div>
     <div class="form-row">
@@ -265,12 +295,12 @@ async function openGameModal(id) {
     </div>
     <div class="form-row">
       <div class="form-group">
-        <label class="form-label">Sale Price (₹) *</label>
+        <label class="form-label">Price (₹) *</label>
         <input class="form-input" id="fg-price" type="number" value="${g?.price||''}" placeholder="149"/>
       </div>
       <div class="form-group">
         <label class="form-label">Original Price (₹)</label>
-        <input class="form-input" id="fg-orig" type="number" value="${g?.original_price||''}" placeholder="1999"/>
+        <input class="form-input" id="fg-orig" type="number" value="${g?.original_price||''}" placeholder="1799"/>
       </div>
     </div>
     <div class="form-row">
@@ -318,271 +348,168 @@ async function openGameModal(id) {
 }
 
 async function deleteGame(id) {
-  if (!confirm('Delete this game? (It will be hidden if it has inventory)')) return;
+  if (!confirm('Are you sure you want to delete this game?')) return;
   const r = await api('DELETE', `/api/games/${id}`).catch(() => null);
   if (!r?.success) { toast('Delete failed', 'error'); return; }
-  toast(r.type === 'soft' ? 'Game hidden (has inventory)' : 'Game deleted');
-  renderGames();
+  toast('Game deleted'); renderGames();
 }
 
-// ── INVENTORY ─────────────────────────────────────────────────
-let invFilter = { game_id: '', status: '', page: 1 };
-let allGames  = [];
+// ── MULTI-SLOT STEAM CREDENTIALS MODAL (Up to 10+ Accounts per Game) ──
+async function openGameAccountsModal(gameId, gameName) {
+  const accounts = await api('GET', `/api/games/${gameId}/accounts`).catch(() => []);
 
-async function renderInventory() {
-  addTopbarBtn('+ Add Account', () => openAddInventoryModal());
-  addTopbarBtn('📥 Import CSV', openImportModal, 'btn-secondary');
-  addTopbarBtn('⬇ Template', () => window.location.href = '/api/inventory/template.csv', 'btn-ghost');
-
-  if (!allGames.length) allGames = await api('GET', '/api/games').catch(() => []);
-
-  const qs = new URLSearchParams({
-    ...(invFilter.game_id && { game_id: invFilter.game_id }),
-    ...(invFilter.status  && { status:  invFilter.status }),
-    page: invFilter.page
-  });
-  const data = await api('GET', '/api/inventory?' + qs).catch(() => ({ items: [], total: 0 }));
-
-  setContent(`
-  <div class="toolbar">
-    <select class="filter-select" id="invGameFilter">
-      <option value="">All Games</option>
-      ${allGames.map(g => `<option value="${g.id}" ${g.id == invFilter.game_id ? 'selected' : ''}>${esc(g.name)}</option>`).join('')}
-    </select>
-    <select class="filter-select" id="invStatusFilter">
-      <option value="">All Status</option>
-      <option value="available" ${invFilter.status==='available'?'selected':''}>Available</option>
-      <option value="sold"      ${invFilter.status==='sold'?'selected':''}>Sold</option>
-      <option value="replaced"  ${invFilter.status==='replaced'?'selected':''}>Replaced</option>
-    </select>
-    <span style="color:#6b7280;font-size:13px">${data.total} total</span>
-  </div>
-  <div class="card">
-    <div class="table-wrap">
-      <table>
-        <thead><tr><th>Game</th><th>Steam Username</th><th>Status</th><th>Created</th><th>Sold At</th><th>Actions</th></tr></thead>
-        <tbody>
-          ${data.items.length ? data.items.map(i => `
-          <tr>
-            <td class="td-name">${esc(i.game_name||'—')}</td>
-            <td class="td-mono">${esc(i.steam_username)}</td>
-            <td><span class="badge badge-${invStatusColor(i.status)}">${i.status}</span></td>
-            <td class="muted">${fmtDate(i.created_at)}</td>
-            <td class="muted">${i.sold_at ? fmtDate(i.sold_at) : '—'}</td>
-            <td>
-              <button class="btn btn-ghost btn-xs" onclick="openInvLogsModal('${i.id}')">Logs</button>
-              <button class="btn btn-ghost btn-xs" onclick="openReplaceModal('${i.id}')">Replace</button>
-              ${i.status !== 'sold' ? `<button class="btn btn-danger btn-xs" onclick="deleteInv('${i.id}')">Del</button>` : ''}
-            </td>
-          </tr>`).join('') : '<tr><td colspan="6" class="muted" style="text-align:center;padding:30px">No inventory. Import via CSV or add manually.</td></tr>'}
-        </tbody>
-      </table>
+  openModal(`Steam Credentials — ${gameName}`, `
+    <div style="font-size:12px;color:#9ea3b5;margin-bottom:16px">
+      Add or update Steam account slots for this game. When an order is approved, buyers receive credentials from an active slot.
     </div>
-    <div class="pagination">
-      <span>${data.total} items</span>
-      <div class="pagination-btns">
-        ${invFilter.page > 1 ? `<button class="page-btn" onclick="invPage(${invFilter.page-1})">‹</button>` : ''}
-        <span class="page-btn active">${invFilter.page}</span>
-        ${data.total > invFilter.page * 50 ? `<button class="page-btn" onclick="invPage(${invFilter.page+1})">›</button>` : ''}
-      </div>
-    </div>
-  </div>`);
 
-  document.getElementById('invGameFilter')?.addEventListener('change', e => { invFilter.game_id = e.target.value; invFilter.page = 1; renderInventory(); });
-  document.getElementById('invStatusFilter')?.addEventListener('change', e => { invFilter.status  = e.target.value; invFilter.page = 1; renderInventory(); });
-}
-
-function invPage(p) { invFilter.page = p; renderInventory(); }
-
-async function openAddInventoryModal() {
-  if (!allGames.length) allGames = await api('GET', '/api/games').catch(() => []);
-  openModal('Add Steam Account', `
-    <div class="form-group">
-      <label class="form-label">Game *</label>
-      <select class="form-select" id="fi-game">
-        <option value="">Select game…</option>
-        ${allGames.map(g => `<option value="${g.id}">${esc(g.name)}</option>`).join('')}
-      </select>
-    </div>
-    <div class="form-group">
-      <label class="form-label">Steam Username *</label>
-      <input class="form-input" id="fi-user" placeholder="e.g. steamuser_abc"/>
-    </div>
-    <div class="form-group">
-      <label class="form-label">Steam Password *</label>
-      <input class="form-input" type="password" id="fi-pass" placeholder="••••••••"/>
-      <div class="form-hint">Encrypted with AES-256 before storage.</div>
-    </div>
-  `, [
-    { label: 'Add Account', cls: 'btn-primary', action: async () => {
-      const game_id  = document.getElementById('fi-game').value;
-      const username = document.getElementById('fi-user').value.trim();
-      const password = document.getElementById('fi-pass').value.trim();
-      if (!game_id || !username || !password) { toast('All fields required', 'error'); return; }
-      const r = await api('POST', '/api/inventory', { game_id, steam_username: username, steam_password: password }).catch(() => null);
-      if (!r?.id) { toast('Failed to add account', 'error'); return; }
-      toast('Account added ✅'); closeModal(); renderInventory();
-    }},
-    { label: 'Cancel', cls: 'btn-secondary', action: closeModal }
-  ]);
-}
-
-async function openReplaceModal(id) {
-  openModal('Replace Steam Credentials', `
-    <p style="color:#f4a261;font-size:13px;margin-bottom:16px">⚠️ This will replace the encrypted credentials stored for this inventory item and write a <code>replaced</code> audit log entry.</p>
-    <div class="form-group">
-      <label class="form-label">New Steam Username *</label>
-      <input class="form-input" id="rep-user" placeholder="new_steam_username"/>
-    </div>
-    <div class="form-group">
-      <label class="form-label">New Steam Password *</label>
-      <input class="form-input" type="password" id="rep-pass" placeholder="new password"/>
-    </div>
-  `, [
-    { label: 'Replace', cls: 'btn-primary', action: async () => {
-      const r = await api('POST', `/api/inventory/${id}/replace`, {
-        steam_username: document.getElementById('rep-user').value.trim(),
-        steam_password: document.getElementById('rep-pass').value.trim()
-      }).catch(() => null);
-      if (!r?.success) { toast('Replace failed', 'error'); return; }
-      toast('Credentials replaced ✅'); closeModal(); renderInventory();
-    }},
-    { label: 'Cancel', cls: 'btn-secondary', action: closeModal }
-  ]);
-}
-
-async function openInvLogsModal(id) {
-  const logs = await api('GET', `/api/inventory/${id}/logs`).catch(() => []);
-  openModal(`Audit Log`, `
-    <div style="max-height:360px;overflow-y:auto">
-    ${logs.length ? logs.map(l => `
-      <div style="display:flex;gap:12px;padding:10px 0;border-bottom:1px solid #1f2333">
-        <span class="badge badge-${actionColor(l.action)}" style="flex-shrink:0;align-self:flex-start">${l.action}</span>
-        <div>
-          <div style="font-size:12px;color:#e8eaf0"><strong>${esc(l.actor)}</strong></div>
-          <div style="font-size:11px;color:#6b7280">${fmtDate(l.created_at)}</div>
-          ${l.meta ? `<div style="font-size:11px;color:#4b5563;margin-top:4px;font-family:monospace">${JSON.stringify(l.meta)}</div>` : ''}
+    <!-- Accounts List -->
+    <div id="accountsList" style="max-height:240px;overflow-y:auto;margin-bottom:16px;border:1px solid #1f2333;border-radius:8px;">
+      ${accounts.length ? accounts.map((acc, i) => `
+        <div style="padding:10px 14px;border-bottom:1px solid #1f2333;display:flex;align-items:center;justify-content:space-between;background:#0d0f14;">
+          <div>
+            <div style="font-size:13px;font-weight:600;color:#2ec4b6">
+              <span class="badge badge-blue">${esc(acc.slot_name || 'Slot ' + (i+1))}</span>
+              User: <span class="td-mono">${esc(acc.steam_username)}</span>
+            </div>
+            <div style="font-size:12px;color:#9ea3b5;margin-top:2px">
+              Password: <span class="td-mono" style="color:#f4a261">${esc(acc.steam_password)}</span>
+            </div>
+          </div>
+          <div>
+            <button class="btn btn-ghost btn-xs" onclick="fillAccountEditForm(${acc.id}, '${esc(acc.slot_name)}', '${esc(acc.steam_username)}', '${esc(acc.steam_password)}')">Edit</button>
+            <button class="btn btn-danger btn-xs" onclick="deleteAccountSlot(${acc.id}, ${gameId}, '${esc(gameName)}')">Del</button>
+          </div>
         </div>
-      </div>`).join('') : '<div class="empty-state" style="padding:30px"><p>No logs for this item.</p></div>'}
+      `).join('') : '<div class="empty-state" style="padding:20px"><p>No Steam account slots added yet. Add one below!</p></div>'}
     </div>
-  `, [{ label: 'Close', cls: 'btn-secondary', action: closeModal }]);
-}
 
-async function deleteInv(id) {
-  if (!confirm('Delete this inventory item? This cannot be undone.')) return;
-  const r = await api('DELETE', `/api/inventory/${id}`).catch(() => null);
-  if (!r?.success) { toast('Delete failed. Sold items cannot be deleted.', 'error'); return; }
-  toast('Deleted ✅'); renderInventory();
-}
-
-function openImportModal() {
-  openModal('Bulk CSV Import', `
-    <p style="font-size:13px;color:#9ea3b5;margin-bottom:16px">Upload a CSV file with columns: <code style="background:#0d0f14;padding:2px 6px;border-radius:4px">game_id, steam_username, steam_password</code></p>
-    <div class="upload-zone" id="uploadZone">
-      <div class="upload-icon">📁</div>
-      <p>Click to choose CSV file or drag & drop</p>
-      <small>Max 5 MB · CSV only</small>
-      <input type="file" id="csvFile" accept=".csv" style="display:none"/>
-    </div>
-    <div class="import-result" id="importResult" style="display:none"></div>
-    <div class="upload-progress" id="uploadProgress" style="display:none">
-      <div class="progress-bar-wrap"><div class="progress-bar" id="progressBar" style="width:0%"></div></div>
-      <p style="font-size:12px;color:#6b7280;margin-top:6px" id="progressText">Uploading…</p>
+    <!-- Add/Edit Form -->
+    <div style="background:#13161e;padding:14px;border-radius:8px;border:1px solid #1f2333">
+      <div style="font-size:13px;font-weight:600;margin-bottom:10px" id="accFormTitle">Add New Steam Slot</div>
+      <input type="hidden" id="fa-account-id" value=""/>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Slot Name</label>
+          <input class="form-input" id="fa-slot-name" placeholder="e.g. Slot 1 / Account A"/>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Steam Username *</label>
+          <input class="form-input" id="fa-username" placeholder="e.g. steam_user_01"/>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Steam Password *</label>
+        <input class="form-input" type="text" id="fa-password" placeholder="e.g. steam_pass_123"/>
+      </div>
+      <button class="btn btn-primary btn-sm" id="saveAccountBtn">Save Account Slot</button>
+      <button class="btn btn-ghost btn-sm" id="resetAccountBtn" style="display:none" onclick="resetAccForm()">Cancel Edit</button>
     </div>
   `, [
-    { label: 'Import', cls: 'btn-primary', id: 'importBtn', action: doImport },
-    { label: 'Cancel', cls: 'btn-secondary', action: closeModal }
+    { label: 'Close', cls: 'btn-secondary', action: closeModal }
   ]);
 
-  const zone = document.getElementById('uploadZone');
-  const file = document.getElementById('csvFile');
-  zone.addEventListener('click', () => file.click());
-  zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drag'); });
-  zone.addEventListener('dragleave', () => zone.classList.remove('drag'));
-  zone.addEventListener('drop', e => {
-    e.preventDefault(); zone.classList.remove('drag');
-    if (e.dataTransfer.files[0]) {
-      file._file = e.dataTransfer.files[0];
-      zone.querySelector('p').textContent = '✅ ' + e.dataTransfer.files[0].name;
+  document.getElementById('saveAccountBtn').addEventListener('click', async () => {
+    const account_id     = document.getElementById('fa-account-id').value;
+    const slot_name      = document.getElementById('fa-slot-name').value || `Slot ${accounts.length + 1}`;
+    const steam_username = document.getElementById('fa-username').value.trim();
+    const steam_password = document.getElementById('fa-password').value.trim();
+
+    if (!steam_username || !steam_password) {
+      toast('Steam username and password are required', 'error');
+      return;
     }
-  });
-  file.addEventListener('change', () => {
-    if (file.files[0]) zone.querySelector('p').textContent = '✅ ' + file.files[0].name;
+
+    const r = await api('POST', `/api/games/${gameId}/accounts`, {
+      account_id: account_id || null,
+      slot_name,
+      steam_username,
+      steam_password
+    }).catch(() => null);
+
+    if (!r?.success) {
+      toast(r?.error || 'Failed to save account slot', 'error');
+      return;
+    }
+
+    toast('Steam account slot saved ✅');
+    openGameAccountsModal(gameId, gameName);
   });
 }
 
-async function doImport() {
-  const fileEl  = document.getElementById('csvFile');
-  const theFile = fileEl._file || fileEl.files[0];
-  if (!theFile) { toast('Select a CSV file first', 'error'); return; }
-
-  document.getElementById('uploadProgress').style.display = 'block';
-  document.getElementById('progressBar').style.width = '40%';
-  document.getElementById('progressText').textContent = 'Uploading…';
-
-  const form = new FormData();
-  form.append('file', theFile);
-  try {
-    const r = await fetch('/api/inventory/import-csv', {
-      method: 'POST', credentials: 'include', body: form
-    });
-    const d = await r.json();
-    document.getElementById('progressBar').style.width = '100%';
-    const res = document.getElementById('importResult');
-    res.style.display = 'block';
-    if (d.inserted > 0) {
-      res.className = 'import-result success';
-      res.innerHTML = `✅ Imported ${d.inserted} account${d.inserted>1?'s':''}. ${d.failed > 0 ? `${d.failed} failed.` : ''}`;
-    } else {
-      res.className = 'import-result error';
-      res.innerHTML = `❌ Import failed. ${d.errors?.[0]?.error || d.error || 'Check your CSV format.'}`;
-    }
-    if (d.inserted > 0) { setTimeout(() => { closeModal(); renderInventory(); }, 1500); }
-  } catch {
-    toast('Import failed – network error', 'error');
-  }
+function fillAccountEditForm(id, slotName, username, password) {
+  document.getElementById('fa-account-id').value = id;
+  document.getElementById('fa-slot-name').value   = slotName;
+  document.getElementById('fa-username').value    = username;
+  document.getElementById('fa-password').value    = password;
+  document.getElementById('accFormTitle').textContent = 'Edit Steam Slot: ' + slotName;
+  document.getElementById('resetAccountBtn').style.display = 'inline-block';
 }
 
-// ── ORDERS ────────────────────────────────────────────────────
+function resetAccForm() {
+  document.getElementById('fa-account-id').value = '';
+  document.getElementById('fa-slot-name').value   = '';
+  document.getElementById('fa-username').value    = '';
+  document.getElementById('fa-password').value    = '';
+  document.getElementById('accFormTitle').textContent = 'Add New Steam Slot';
+  document.getElementById('resetAccountBtn').style.display = 'none';
+}
+
+async function deleteAccountSlot(accountId, gameId, gameName) {
+  if (!confirm('Delete this Steam account slot?')) return;
+  const r = await api('DELETE', `/api/games/accounts/${accountId}`).catch(() => null);
+  if (!r?.success) { toast('Failed to delete slot', 'error'); return; }
+  toast('Slot deleted');
+  openGameAccountsModal(gameId, gameName);
+}
+
+// ── ORDERS & MANUAL UPI APPROVAL ──────────────────────────────
 let ordFilter = { status: '', search: '', page: 1 };
 async function renderOrders() {
   const qs   = new URLSearchParams({ ...(ordFilter.status && {status: ordFilter.status}), ...(ordFilter.search && {search: ordFilter.search}), page: ordFilter.page });
-  const data = await api('GET', '/api/orders?' + qs).catch(() => ({ orders: [], total: 0, pages: 1 }));
+  const data = await api('GET', '/api/orders?' + qs).catch(() => ({ orders: [], total: 0, pages: 1, pending_count: 0 }));
 
   setContent(`
   <div class="toolbar">
     <div class="search-box">
       <span>🔍</span>
-      <input id="ordSearch" placeholder="Search email, name, payment ID…" value="${esc(ordFilter.search)}"/>
+      <input id="ordSearch" placeholder="Search email, name, UTR number…" value="${esc(ordFilter.search)}"/>
     </div>
     <select class="filter-select" id="ordStatus">
-      <option value="">All Status</option>
-      <option value="pending" ${ordFilter.status==='pending'?'selected':''}>Pending</option>
-      <option value="paid"    ${ordFilter.status==='paid'?'selected':''}>Paid</option>
-      <option value="failed"  ${ordFilter.status==='failed'?'selected':''}>Failed</option>
+      <option value="">All Statuses</option>
+      <option value="pending_approval" ${ordFilter.status==='pending_approval'?'selected':''}>Pending Verification (UTR)</option>
+      <option value="delivered"        ${ordFilter.status==='delivered'?'selected':''}>Delivered / Approved</option>
+      <option value="rejected"         ${ordFilter.status==='rejected'?'selected':''}>Rejected</option>
     </select>
     <span style="color:#6b7280;font-size:13px">${data.total} orders</span>
   </div>
+
   <div class="card">
     <div class="table-wrap">
       <table>
-        <thead><tr><th>Customer</th><th>Game</th><th>Amount</th><th>Status</th><th>Date</th><th>Actions</th></tr></thead>
+        <thead><tr><th>Customer Email</th><th>Game</th><th>Amount</th><th>Submitted UTR</th><th>Status</th><th>Date</th><th>Actions</th></tr></thead>
         <tbody>
           ${data.orders.length ? data.orders.map(o => `
           <tr>
             <td>
               <div class="td-name">${esc(o.buyer_email)}</div>
-              ${o.buyer_name ? `<div style="font-size:11px;color:#6b7280">${esc(o.buyer_name)}</div>` : ''}
+              ${o.buyer_whatsapp ? `<div style="font-size:11px;color:#2ec4b6">WA: ${esc(o.buyer_whatsapp)}</div>` : ''}
             </td>
             <td class="muted">${esc(o.emoji||'🎮')} ${esc(o.game_name||'—')}</td>
             <td><strong>₹${parseFloat(o.amount).toFixed(0)}</strong></td>
-            <td><span class="badge badge-${statusColor(o.status)}">${o.status}</span></td>
+            <td class="td-mono" style="color:#2ec4b6"><strong>${esc(o.utr_number || '—')}</strong></td>
+            <td><span class="badge badge-${statusColor(o.status)}">${statusLabel(o.status)}</span></td>
             <td class="muted" style="font-size:12px">${fmtDate(o.created_at)}</td>
             <td>
-              <button class="btn btn-ghost btn-xs" onclick="openOrderModal('${o.id}')">View</button>
-              ${o.status==='paid' && o.has_inventory ? `<button class="btn btn-ghost btn-xs" onclick="revealCreds('${o.id}')">🔑 Reveal</button>` : ''}
+              ${o.status === 'pending_approval' ? `
+                <button class="btn btn-primary btn-xs" onclick="approveOrder('${o.id}')">✅ Approve &amp; Deliver</button>
+                <button class="btn btn-danger btn-xs" onclick="rejectOrder('${o.id}')">❌ Reject</button>
+              ` : `
+                <button class="btn btn-ghost btn-xs" onclick="openOrderModal('${o.id}')">View</button>
+                ${o.status === 'delivered' ? `<button class="btn btn-ghost btn-xs" onclick="revealCreds('${o.id}')">🔑 Creds</button>` : ''}
+              `}
             </td>
-          </tr>`).join('') : '<tr><td colspan="6" class="muted" style="text-align:center;padding:30px">No orders yet.</td></tr>'}
+          </tr>`).join('') : '<tr><td colspan="7" class="muted" style="text-align:center;padding:30px">No orders found.</td></tr>'}
         </tbody>
       </table>
     </div>
@@ -608,23 +535,43 @@ async function renderOrders() {
 
 function ordPage(p) { ordFilter.page = p; renderOrders(); }
 
+async function approveOrder(id) {
+  if (!confirm('Approve this order and deliver Steam credentials to the buyer?')) return;
+  const r = await api('POST', `/api/orders/${id}/approve`, {}).catch(e => e.data);
+  if (!r?.success) {
+    toast(r?.error || 'Failed to approve order', 'error');
+    return;
+  }
+  toast('Order Approved & Delivered! ✅');
+  renderOrders();
+}
+
+async function rejectOrder(id) {
+  const reason = prompt('Enter reason for rejecting this UTR payment (e.g. UTR Not Received / Invalid UTR):', 'UTR Not Found in Bank Statement');
+  if (reason === null) return;
+  const r = await api('POST', `/api/orders/${id}/reject`, { reason }).catch(() => null);
+  if (!r?.success) { toast('Failed to reject order', 'error'); return; }
+  toast('Order Rejected');
+  renderOrders();
+}
+
 async function openOrderModal(id) {
   const o = await api('GET', `/api/orders/${id}`).catch(() => null);
   if (!o) { toast('Failed to load order', 'error'); return; }
   openModal('Order Details', `
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
-      <div><div style="font-size:11px;color:#6b7280;margin-bottom:3px">STATUS</div><span class="badge badge-${statusColor(o.status)}">${o.status}</span></div>
+      <div><div style="font-size:11px;color:#6b7280;margin-bottom:3px">STATUS</div><span class="badge badge-${statusColor(o.status)}">${statusLabel(o.status)}</span></div>
       <div><div style="font-size:11px;color:#6b7280;margin-bottom:3px">AMOUNT</div><strong style="color:#e63946">₹${parseFloat(o.amount).toFixed(2)}</strong></div>
+      <div><div style="font-size:11px;color:#6b7280;margin-bottom:3px">SUBMITTED UTR</div><span class="td-mono" style="color:#2ec4b6;font-weight:700">${esc(o.utr_number||'—')}</span></div>
       <div><div style="font-size:11px;color:#6b7280;margin-bottom:3px">CUSTOMER</div><span style="font-size:13px">${esc(o.buyer_email)}</span></div>
       <div><div style="font-size:11px;color:#6b7280;margin-bottom:3px">GAME</div><span style="font-size:13px">${esc(o.emoji||'🎮')} ${esc(o.game_name||'—')}</span></div>
-      <div><div style="font-size:11px;color:#6b7280;margin-bottom:3px">RAZORPAY ORDER</div><span class="td-mono" style="font-size:11px">${esc(o.razorpay_order_id||'—')}</span></div>
-      <div><div style="font-size:11px;color:#6b7280;margin-bottom:3px">PAYMENT ID</div><span class="td-mono" style="font-size:11px">${esc(o.razorpay_payment_id||'—')}</span></div>
+      <div><div style="font-size:11px;color:#6b7280;margin-bottom:3px">APPROVED BY</div><span style="font-size:12px">${esc(o.approved_by||'—')}</span></div>
     </div>
     <div style="font-size:11px;color:#6b7280;margin-bottom:8px">ORDER ID: <span class="td-mono">${o.id}</span></div>
-    ${o.steam_username ? `<div style="background:#0d0f14;border:1px solid #1f2333;border-radius:8px;padding:12px;font-family:monospace;font-size:13px;color:#2ec4b6">Steam Username: ${esc(o.steam_username)}</div>` : ''}
+    ${o.assigned_username ? `<div style="background:#0d0f14;border:1px solid #1f2333;border-radius:8px;padding:12px;font-family:monospace;font-size:13px;color:#2ec4b6">Assigned Steam Username: ${esc(o.assigned_username)}</div>` : ''}
   `, [
-    ...(o.status === 'paid' && o.inventory_id ? [{ label: '🔑 Reveal Credentials', cls: 'btn-primary', action: () => { closeModal(); revealCreds(id); }}] : []),
-    ...(!o.inventory_id && o.status === 'paid' ? [{ label: '📦 Assign Inventory', cls: 'btn-secondary', action: () => { closeModal(); openAssignModal(id); }}] : []),
+    ...(o.status === 'delivered' ? [{ label: '🔑 Reveal Password', cls: 'btn-primary', action: () => { closeModal(); revealCreds(id); }}] : []),
+    ...(o.status === 'pending_approval' ? [{ label: '✅ Approve & Deliver', cls: 'btn-primary', action: () => { closeModal(); approveOrder(id); }}] : []),
     { label: 'Close', cls: 'btn-secondary', action: closeModal }
   ]);
 }
@@ -649,34 +596,7 @@ async function revealCreds(id) {
         </div>
       </div>
     </div>
-    <div style="font-size:12px;color:#6b7280;margin-top:12px">This reveal has been logged to the audit trail.</div>
   `, [{ label: 'Close', cls: 'btn-secondary', action: closeModal }]);
-}
-
-async function openAssignModal(orderId) {
-  if (!allGames.length) allGames = await api('GET', '/api/games').catch(() => []);
-  const order = await api('GET', `/api/orders/${orderId}`).catch(() => null);
-  const inv   = await api('GET', `/api/inventory?status=available${order?.game_id ? '&game_id=' + order.game_id : ''}`).catch(() => ({ items: [] }));
-
-  openModal('Manually Assign Inventory', `
-    <p style="font-size:13px;color:#f4a261;margin-bottom:14px">⚠️ This order has no inventory assigned. Select an available account to assign.</p>
-    <div class="form-group">
-      <label class="form-label">Available Accounts</label>
-      <select class="form-select" id="assign-inv">
-        <option value="">Select account…</option>
-        ${inv.items.map(i => `<option value="${i.id}">[${esc(i.game_name)}] ${esc(i.steam_username)}</option>`).join('')}
-      </select>
-    </div>
-  `, [
-    { label: 'Assign', cls: 'btn-primary', action: async () => {
-      const inventory_id = document.getElementById('assign-inv').value;
-      if (!inventory_id) { toast('Select an account', 'error'); return; }
-      const r = await api('POST', `/api/orders/${orderId}/assign-inventory`, { inventory_id }).catch(() => null);
-      if (!r?.success) { toast('Assignment failed', 'error'); return; }
-      toast('Inventory assigned ✅'); closeModal(); renderOrders();
-    }},
-    { label: 'Cancel', cls: 'btn-secondary', action: closeModal }
-  ]);
 }
 
 // ── AUDIT LOG ─────────────────────────────────────────────────
@@ -686,17 +606,16 @@ async function renderAudit() {
   <div class="card">
     <div class="table-wrap">
       <table>
-        <thead><tr><th>Action</th><th>Actor</th><th>Game</th><th>Steam User</th><th>Details</th><th>Date</th></tr></thead>
+        <thead><tr><th>Action</th><th>Actor</th><th>Game</th><th>Details</th><th>Date</th></tr></thead>
         <tbody>
           ${logs.length ? logs.map(l => `
           <tr>
             <td><span class="badge badge-${actionColor(l.action)}">${l.action}</span></td>
             <td class="muted">${esc(l.actor||'system')}</td>
             <td class="muted">${esc(l.game_name||'—')}</td>
-            <td class="td-mono">${esc(l.steam_username||'—')}</td>
-            <td class="muted" style="font-size:11px">${l.meta ? JSON.stringify(l.meta).substring(0,60) : '—'}</td>
+            <td class="muted" style="font-size:11px">${l.meta ? JSON.stringify(l.meta).substring(0,70) : '—'}</td>
             <td class="muted" style="font-size:12px">${fmtDate(l.created_at)}</td>
-          </tr>`).join('') : '<tr><td colspan="6" class="muted" style="text-align:center;padding:30px">No audit logs yet.</td></tr>'}
+          </tr>`).join('') : '<tr><td colspan="5" class="muted" style="text-align:center;padding:30px">No audit logs yet.</td></tr>'}
         </tbody>
       </table>
     </div>
@@ -757,7 +676,7 @@ async function deleteAdmin(id) {
 function renderSettings() {
   setContent(`
   <div class="card" style="max-width:440px">
-    <div class="card-header"><div class="card-title">Change Password</div></div>
+    <div class="card-header"><div class="card-title">Change Admin Password</div></div>
     <div id="pwErr" style="display:none;background:rgba(230,57,70,.1);border:1px solid rgba(230,57,70,.3);color:#ff6b7a;padding:9px 12px;border-radius:6px;font-size:13px;margin-bottom:12px"></div>
     <div id="pwOk" style="display:none;background:rgba(46,196,182,.1);border:1px solid rgba(46,196,182,.3);color:#2ec4b6;padding:9px 12px;border-radius:6px;font-size:13px;margin-bottom:12px"></div>
     <div class="form-group"><label class="form-label">Current Password</label><input class="form-input" type="password" id="pw-cur" placeholder="••••••••"/></div>
@@ -782,7 +701,7 @@ function renderSettings() {
   });
 }
 
-// ── HELPERS / UTILS ──────────────────────────────────────────
+// ── UTILS ─────────────────────────────────────────────────────
 async function api(method, url, body) {
   const opts = { method, credentials: 'include', headers: {} };
   if (body) { opts.headers['Content-Type'] = 'application/json'; opts.body = JSON.stringify(body); }
@@ -840,9 +759,9 @@ function esc(str) {
 function fmt(n) { return parseFloat(n || 0).toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
 function fmtDate(iso) { return iso ? new Date(iso).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' }) : '—'; }
 
-function statusColor(s) { return {paid:'green', pending:'gold', failed:'red', refunded:'gray'}[s] || 'gray'; }
-function invStatusColor(s) { return {available:'green', sold:'blue', reserved:'gold', replaced:'gray'}[s] || 'gray'; }
+function statusColor(s) { return {delivered:'green', pending_approval:'gold', rejected:'red'}[s] || 'gray'; }
+function statusLabel(s) { return {delivered:'Delivered', pending_approval:'Pending UTR', rejected:'Rejected'}[s] || s; }
 function actionColor(a) {
-  const m = {imported:'blue', assigned:'green', sold:'gold', replaced:'gold', deleted:'red', revealed_customer:'blue', revealed_admin:'gold'};
+  const m = {approved_delivered:'green', rejected:'red', order_created:'gold', revealed_customer:'blue', revealed_admin:'gold'};
   return m[a] || 'gray';
 }

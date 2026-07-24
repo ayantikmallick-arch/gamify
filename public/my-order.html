@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>My Order – GamifyDeals</title>
+  <title>Your Game Access – GamifyDeals</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%23e63946'/><text y='.9em' font-size='70' x='15'>🎮</text></svg>"/>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"/>
@@ -37,9 +37,9 @@
     .order-card-header h2{font-size:16px;font-weight:600}
     .order-id{font-family:'Consolas',monospace;font-size:11px;color:#6b7280}
     .status-badge{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:12px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.4px}
-    .status-paid{background:rgba(46,196,182,.12);color:#2ec4b6}
-    .status-pending{background:rgba(244,162,97,.12);color:#f4a261}
-    .status-failed{background:rgba(230,57,70,.12);color:#e63946}
+    .status-delivered{background:rgba(46,196,182,.12);color:#2ec4b6}
+    .status-pending_approval{background:rgba(244,162,97,.12);color:#f4a261}
+    .status-rejected{background:rgba(230,57,70,.12);color:#e63946}
 
     .order-meta{padding:20px 24px;display:grid;grid-template-columns:1fr 1fr;gap:14px;border-bottom:1px solid #1f2333}
     .meta-item label{font-size:11px;color:#6b7280;font-weight:500;text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:4px}
@@ -99,7 +99,7 @@
     <img src="/logo.png" alt="GamifyDeals" onerror="this.style.display='none'"/>
     <span>Gamify<em>Deals</em></span>
   </a>
-  <a href="/" class="nav-link">← Back to Store</a>
+  <a href="/" class="nav-link">← Back to Catalog</a>
 </nav>
 
 <div class="page-wrap">
@@ -107,15 +107,15 @@
   <!-- Loading -->
   <div class="loading-state" id="loadingState">
     <div class="spinner"></div>
-    <p>Loading your order…</p>
+    <p>Loading your game access details…</p>
   </div>
 
   <!-- Error -->
   <div class="error-state" id="errorState" style="display:none">
     <div class="icon">🔒</div>
-    <h2 id="errorTitle">Access Denied</h2>
-    <p id="errorMsg">Your order link is invalid or has been tampered with.</p>
-    <a href="/" style="display:inline-block;margin-top:16px;background:#e63946;color:#fff;padding:10px 20px;border-radius:8px;font-size:13px;font-weight:600;">Browse Games →</a>
+    <h2 id="errorTitle">Access Token Invalid</h2>
+    <p id="errorMsg">Your order link is missing or invalid.</p>
+    <a href="/" style="display:inline-block;margin-top:16px;background:#e63946;color:#fff;padding:10px 20px;border-radius:8px;font-size:13px;font-weight:600;">Browse Catalog →</a>
   </div>
 
   <!-- Order Content -->
@@ -125,10 +125,10 @@
     <div class="order-card">
       <div class="order-card-header">
         <div>
-          <h2>Order Confirmed ✅</h2>
+          <h2>Your Game Access</h2>
           <div class="order-id" id="displayOrderId">Order ID: …</div>
         </div>
-        <span class="status-badge status-paid" id="statusBadge">Paid</span>
+        <span class="status-badge" id="statusBadge">Pending Verification</span>
       </div>
 
       <div class="order-meta">
@@ -137,11 +137,11 @@
           <span id="metaDate">—</span>
         </div>
         <div class="meta-item">
-          <label>Payment Date</label>
-          <span id="metaPaid">—</span>
+          <label>Submitted UTR Number</label>
+          <span id="metaUtr" style="font-family:monospace;color:#2ec4b6">—</span>
         </div>
         <div class="meta-item">
-          <label>Email</label>
+          <label>Email Address</label>
           <span id="metaEmail">—</span>
         </div>
         <div class="meta-item">
@@ -161,23 +161,29 @@
         </div>
       </div>
 
-      <!-- CREDENTIALS -->
+      <!-- CREDENTIALS / APPROVAL STATUS -->
       <div class="credentials-section">
         <div class="cred-heading">🔐 Steam Account Credentials</div>
-        <div class="cred-desc">
-          Your credentials are encrypted and stored securely. Click the button below to reveal your Steam account details. Save them somewhere safe — this link has no expiry.
-        </div>
 
-        <!-- Pending (no inventory assigned yet) -->
+        <!-- Pending Approval Box -->
         <div class="pending-box" id="pendingBox" style="display:none">
-          <h3>⏳ Preparing Your Account</h3>
-          <p>Your payment was received! Our team is assigning your Steam account. This usually takes a few minutes. <br><br>Please WhatsApp us with your Order ID for the fastest response.</p>
+          <h3>⏳ Payment Verification Pending</h3>
+          <p>Your payment UTR has been submitted. Our team is verifying your payment with UPI ID <strong>9851228158@fam</strong>.<br><br>Want faster delivery? Click the button below to WhatsApp your Order ID and UTR directly to our admin team.</p>
           <a id="whatsappPending" href="#" class="whatsapp-btn" target="_blank">
-            💬 WhatsApp Support
+            💬 WhatsApp Admin with UTR
           </a>
         </div>
 
-        <!-- Reveal button -->
+        <!-- Rejected Box -->
+        <div class="pending-box" id="rejectedBox" style="display:none;background:rgba(230,57,70,.08);border-color:rgba(230,57,70,.25);">
+          <h3 style="color:#e63946">❌ Verification Unsuccessful</h3>
+          <p>We could not match your submitted UTR with the payment received. Please contact WhatsApp support with your payment receipt screenshot.</p>
+          <a id="whatsappRejected" href="#" class="whatsapp-btn" style="background:#e63946" target="_blank">
+            💬 Contact WhatsApp Support
+          </a>
+        </div>
+
+        <!-- Reveal button (shown when delivered) -->
         <button class="reveal-btn" id="revealBtn" style="display:none">
           🔑 Reveal Steam Credentials
         </button>
@@ -199,40 +205,40 @@
             </div>
           </div>
           <div class="warn-box">
-            ⚠️ <strong>Important:</strong> This is a <strong>shared account</strong>. Always play in <strong>Steam Offline Mode</strong>. Do not change the account password or email. If you face any issues, contact WhatsApp support — you have <strong>lifetime warranty</strong>.
+            📌 <strong>Important Notice:</strong> This is a <strong>shared Steam account</strong>. Always launch Steam in <strong>Offline Mode</strong> to play. Do not change the credentials or account email. You have a <strong>lifetime replacement warranty</strong>.
           </div>
         </div>
       </div>
     </div>
 
-    <!-- How to play -->
+    <!-- How to play in Offline Mode -->
     <div class="how-box">
       <h3>🎮 How to Play – Steam Offline Mode</h3>
       <div class="how-step">
         <div class="step-num">1</div>
-        <div class="step-text">Open Steam and <strong>log in</strong> with the provided credentials.</div>
+        <div class="step-text">Open Steam on PC and <strong>log in</strong> using the provided username and password.</div>
       </div>
       <div class="how-step">
         <div class="step-num">2</div>
-        <div class="step-text">Go to <strong>Steam → Go Offline</strong> from the top menu.</div>
+        <div class="step-text">Go to the top left menu: <strong>Steam → Go Offline</strong>.</div>
       </div>
       <div class="how-step">
         <div class="step-num">3</div>
-        <div class="step-text">Restart Steam — it will load in <strong>Offline Mode</strong>.</div>
+        <div class="step-text">Restart Steam in <strong>Offline Mode</strong>.</div>
       </div>
       <div class="how-step">
         <div class="step-num">4</div>
-        <div class="step-text">Launch your game and enjoy! If prompted to go online, click <strong>"Stay in Offline Mode"</strong>.</div>
+        <div class="step-text">Download and launch your game. Enjoy playing!</div>
       </div>
       <div class="how-step">
         <div class="step-num">5</div>
-        <div class="step-text">Issues? WhatsApp us anytime — <strong>lifetime warranty</strong> covers you.</div>
+        <div class="step-text">Need help or replacement? Contact WhatsApp support anytime.</div>
       </div>
     </div>
 
     <div style="text-align:center;padding:10px 0 30px">
       <a id="whatsappSupport" href="https://wa.me/917908719976" target="_blank" class="whatsapp-btn">
-        💬 WhatsApp Support – +91 79087 19976
+        💬 Direct WhatsApp Support – +91 79087 19976
       </a>
     </div>
 
@@ -266,7 +272,7 @@
 
   async function loadOrder() {
     if (!ORDER_ID || !TOKEN) {
-      showError('Invalid Link', 'This order link is missing required parameters.');
+      showError('Invalid Link', 'This access link is missing required parameters.');
       return;
     }
 
@@ -278,27 +284,43 @@
 
       if (!res.ok) {
         showError(res.status === 401 ? 'Access Denied' : 'Order Not Found',
-          data.error || 'Could not load this order.');
+          data.error || 'Could not load your order details.');
         return;
       }
 
       document.getElementById('loadingState').style.display = 'none';
       document.getElementById('orderContent').style.display  = 'block';
 
-      // Populate
+      // Populate order data
       document.getElementById('displayOrderId').textContent = 'Order ID: ' + data.id;
       document.getElementById('metaDate').textContent   = fmt(data.created_at);
-      document.getElementById('metaPaid').textContent   = fmt(data.paid_at) || 'Pending';
+      document.getElementById('metaUtr').textContent    = data.utr_number || 'Submitted';
       document.getElementById('metaEmail').textContent  = data.buyer_email;
       document.getElementById('metaAmount').textContent = '₹' + parseFloat(data.amount).toFixed(2);
-      document.getElementById('gameName').textContent   = data.game_name  || 'Your Game';
+      document.getElementById('gameName').textContent   = data.game_name  || 'Steam Game';
       document.getElementById('gameGenre').textContent  = data.genre      || 'Game';
       document.getElementById('gameAmount').textContent = '₹' + parseFloat(data.amount).toFixed(2);
       document.getElementById('gameEmoji').textContent  = data.emoji      || '🎮';
 
       const statusBadge = document.getElementById('statusBadge');
-      statusBadge.textContent = data.status;
-      statusBadge.className   = 'status-badge status-' + data.status;
+
+      if (data.status === 'delivered') {
+        statusBadge.textContent = 'Verified & Access Delivered ✅';
+        statusBadge.className   = 'status-badge status-delivered';
+        document.getElementById('pendingBox').style.display = 'none';
+        document.getElementById('rejectedBox').style.display = 'none';
+        document.getElementById('revealBtn').style.display = 'block';
+        initRevealBtn();
+      } else if (data.status === 'rejected') {
+        statusBadge.textContent = 'Verification Failed ❌';
+        statusBadge.className   = 'status-badge status-rejected';
+        document.getElementById('pendingBox').style.display = 'none';
+        document.getElementById('rejectedBox').style.display = 'block';
+      } else {
+        statusBadge.textContent = 'Verification Pending ⏳';
+        statusBadge.className   = 'status-badge status-pending_approval';
+        document.getElementById('pendingBox').style.display = 'block';
+      }
 
       // Steam cover
       if (data.steam_app_id) {
@@ -312,19 +334,10 @@
       }
 
       // WhatsApp links
-      const wpMsg = encodeURIComponent(`Hi! My order ID is ${data.id}. I need help with my Steam account.`);
+      const wpMsg = encodeURIComponent(`Hi! I paid for Order ${data.id}. My UTR is ${data.utr_number}. Please verify and grant access.`);
       document.getElementById('whatsappSupport').href = `https://wa.me/917908719976?text=${wpMsg}`;
       document.getElementById('whatsappPending').href = `https://wa.me/917908719976?text=${wpMsg}`;
-
-      // Credentials availability
-      if (data.status !== 'paid') {
-        document.getElementById('pendingBox').style.display = 'block';
-      } else if (!data.has_inventory) {
-        document.getElementById('pendingBox').style.display = 'block';
-      } else {
-        document.getElementById('revealBtn').style.display = 'block';
-        initRevealBtn();
-      }
+      document.getElementById('whatsappRejected').href = `https://wa.me/917908719976?text=${wpMsg}`;
 
     } catch (err) {
       showError('Network Error', 'Could not connect to the server. Is it running?');
@@ -337,7 +350,7 @@
 
     btn.addEventListener('click', async () => {
       btn.disabled = true;
-      btn.innerHTML = '<span style="display:inline-block;width:16px;height:16px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .6s linear infinite;vertical-align:middle;margin-right:6px"></span>Revealing…';
+      btn.innerHTML = '<span style="display:inline-block;width:16px;height:16px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .6s linear infinite;vertical-align:middle;margin-right:6px"></span>Retrieving Steam Credentials…';
 
       try {
         const res  = await fetch(`/api/orders/my/${ORDER_ID}/reveal`, {
@@ -347,12 +360,7 @@
         const data = await res.json();
 
         if (!res.ok) {
-          if (data.pending) {
-            btn.style.display = 'none';
-            document.getElementById('pendingBox').style.display = 'block';
-            return;
-          }
-          alert(data.error || 'Failed to reveal credentials. Try again or contact support.');
+          alert(data.error || 'Failed to reveal credentials.');
           btn.disabled = false;
           btn.textContent = '🔑 Reveal Steam Credentials';
           return;

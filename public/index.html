@@ -3,14 +3,12 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-  <title>GamifyDeals – Cheapest Steam Games | Shared Accounts</title>
-  <meta name="description" content="Buy 200+ premium Steam games at unbeatable prices. Shared accounts, instant delivery, lifetime warranty. Starting ₹49."/>
+  <title>GamifyDeals – Affordable Steam Games | Shared Accounts</title>
+  <meta name="description" content="Get access to top Steam games at discounted prices. Shared Steam accounts, offline play, lifetime replacement warranty."/>
   <link rel="stylesheet" href="/style.css"/>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"/>
   <link rel="icon" href="/logo.png" type="image/png"/>
-  <!-- Razorpay SDK -->
-  <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
 </head>
 <body>
 
@@ -24,12 +22,12 @@
   <!-- Desktop nav links -->
   <div class="nav-links" id="navLinks">
     <a href="/">Home</a>
-    <a href="#games">Games</a>
+    <a href="#games">Games Catalog</a>
     <a href="#how-it-works">How It Works</a>
-    <a href="/contact.html">Contact</a>
+    <a href="/contact.html">Support</a>
   </div>
 
-  <!-- Right section – always visible -->
+  <!-- Right section -->
   <div class="nav-right">
     <div class="nav-search" id="desktopSearch">
       <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
@@ -47,86 +45,37 @@
 
 <!-- HERO -->
 <section class="hero">
-  <div class="hero-badge">🎮 Steam Shared Accounts · Instant WhatsApp Delivery</div>
-  <h1>Premium Steam Games<br>at <span>Unbeatable Prices</span></h1>
-  <p>200+ premium Steam titles at a fraction of the original price. Pay via Razorpay — direct Steam account credentials delivered instantly.</p>
-  <div class="hero-stats">
-    <div class="hero-stat"><div class="num">200+</div><div class="label">Games</div></div>
-    <div class="hero-stat"><div class="num">5,000+</div><div class="label">Customers</div></div>
-    <div class="hero-stat"><div class="num">₹49</div><div class="label">Starting Price</div></div>
-    <div class="hero-stat"><div class="num">24/7</div><div class="label">Support</div></div>
-  </div>
+  <div class="hero-badge">🎮 Shared Steam Accounts · Offline Mode Play</div>
+  <h1>Shared Steam Accounts<br><span>Discounted Prices</span></h1>
+  <p>Access popular Steam titles at affordable rates. Simple UPI QR payment, direct login credentials, and lifetime warranty.</p>
   <div class="hero-buttons">
-    <a href="#games" class="btn-primary">Browse All Games</a>
-    <a href="/contact.html" class="btn-secondary">Contact Support</a>
+    <a href="#games" class="btn-primary">Browse Catalog</a>
+    <a href="#how-it-works" class="btn-secondary">How It Works</a>
   </div>
 </section>
 
-<!-- NOTICE -->
+<!-- NOTICE BAR -->
 <div class="notice-bar">
-  <span>⚠️</span>
-  <span>These are <strong>shared Steam accounts</strong>. Play in <strong>offline mode</strong>. <strong>Lifetime warranty</strong> – free replacement guaranteed.</span>
+  <span>💡</span>
+  <span><strong>Important Note:</strong> Games are provided as <strong>Shared Steam Accounts</strong> for <strong>Offline Mode</strong> play. Warranty included for account replacements.</span>
 </div>
 
 <!-- HOW IT WORKS -->
 <section class="section" id="how-it-works">
-  <div class="section-header"><div class="section-title"><span>📋</span> How It Works</div></div>
+  <div class="section-header"><div class="section-title"><span>📋</span> How Ordering Works</div></div>
   <div class="how-steps">
-    <div class="how-step"><div class="step-number">01</div><h3>Browse &amp; Choose</h3><p>Pick any game, add to cart or click Buy Now.</p></div>
-    <div class="how-step"><div class="step-number">02</div><h3>Pay via Razorpay</h3><p>UPI, Card, Net Banking – all accepted. 100% secure.</p></div>
-    <div class="how-step"><div class="step-number">03</div><h3>Get Your Order Page</h3><p>Redirect to your secure order page after payment.</p></div>
-    <div class="how-step"><div class="step-number">04</div><h3>Reveal Credentials</h3><p>Click "Reveal" on your order page to see Steam login.</p></div>
+    <div class="how-step"><div class="step-number">01</div><h3>Select Game</h3><p>Choose any game from our catalog and click <strong>Buy Now</strong>.</p></div>
+    <div class="how-step"><div class="step-number">02</div><h3>Scan UPI QR</h3><p>Scan the generated UPI QR Code using GPay, PhonePe, or Paytm to pay <strong>9851228158@fam</strong>.</p></div>
+    <div class="how-step"><div class="step-number">03</div><h3>Submit UTR / Ref No</h3><p>Enter the 12-digit UPI Transaction Ref ID (UTR) from your payment app.</p></div>
+    <div class="how-step"><div class="step-number">04</div><h3>Receive Access</h3><p>Once verified, reveal your Steam username &amp; password directly in your Order Access page.</p></div>
   </div>
 </section>
 
-<!-- FEATURED -->
-<div class="featured-outer">
-  <div class="featured-strip">
-    <div class="featured-cover">
-      <img src="https://cdn.cloudflare.steamstatic.com/steam/apps/271590/library_600x900.jpg"
-           alt="GTA V"
-           onerror="this.onerror=null;this.src='https://cdn.cloudflare.steamstatic.com/steam/apps/271590/header.jpg'"/>
-    </div>
-    <div class="featured-info">
-      <span class="featured-tag">🔥 Deal of the Week</span>
-      <h2>Grand Theft Auto V<br>Premium Edition</h2>
-      <p>Explore Los Santos. Story mode + GTA Online access. Shared account – play offline mode.</p>
-      <div class="featured-price-row">
-        <span class="featured-price">₹149</span>
-        <span class="featured-original">₹1,799</span>
-        <span class="featured-save">SAVE 92%</span>
-      </div>
-      <div class="featured-buttons">
-        <a href="#" class="btn-buy-featured"
-           onclick="openFeaturedModal('Grand Theft Auto V','₹149','Action','https://cdn.cloudflare.steamstatic.com/steam/apps/271590/library_600x900.jpg');return false;">
-          Buy Now
-        </a>
-        <a href="/contact.html" class="btn-secondary">Ask a Question</a>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- WHY US -->
-<section class="why-us">
-  <div class="why-us-inner">
-    <div class="section-header"><div class="section-title"><span>✅</span> Why GamifyDeals?</div></div>
-    <div class="why-us-grid">
-      <div class="why-card"><div class="why-icon">⚡</div><h3>Instant Delivery</h3><p>Steam credentials on your order page within minutes.</p></div>
-      <div class="why-card"><div class="why-icon">🛡️</div><h3>Lifetime Warranty</h3><p>Account stops working? Free replacement, no questions.</p></div>
-      <div class="why-card"><div class="why-icon">💰</div><h3>Lowest Prices</h3><p>Up to 95% off original Steam prices.</p></div>
-      <div class="why-card"><div class="why-icon">🔐</div><h3>Secure Payment</h3><p>Razorpay — UPI, Card, Net Banking. Bank-grade security.</p></div>
-      <div class="why-card"><div class="why-icon">🎮</div><h3>200+ Titles</h3><p>AAA games, indie hits, sports, strategy and more.</p></div>
-      <div class="why-card"><div class="why-icon">🤝</div><h3>24/7 Support</h3><p>WhatsApp support for all issues and warranty claims.</p></div>
-    </div>
-  </div>
-</section>
-
-<!-- GAMES SECTION -->
+<!-- GAMES CATALOG -->
 <section class="section" id="games">
   <div class="section-header">
-    <div class="section-title"><span>🎮</span> All Games</div>
-    <span id="gamesCountLabel" style="font-size:12px;color:var(--text-muted)">Loading…</span>
+    <div class="section-title"><span>🎮</span> Games Catalog</div>
+    <span id="gamesCountLabel" style="font-size:12px;color:var(--text-muted)">Loading catalog…</span>
   </div>
 
   <!-- Mobile search -->
@@ -136,7 +85,7 @@
   </div>
 
   <div class="filter-bar">
-    <button class="filter-btn active" data-filter="all">All</button>
+    <button class="filter-btn active" data-filter="all">All Games</button>
     <button class="filter-btn" data-filter="Action">Action</button>
     <button class="filter-btn" data-filter="RPG">RPG</button>
     <button class="filter-btn" data-filter="Shooter">Shooter</button>
@@ -164,79 +113,107 @@
           <img src="/logo.png" alt="GamifyDeals" class="logo-img" style="height:30px" onerror="this.style.display='none'"/>
           <span>Gamify<em>Deals</em></span>
         </a>
-        <p>Trusted source for affordable Steam game access in India. Shared accounts, instant delivery, lifetime warranty.</p>
+        <p>Affordable Steam game shared accounts. Instant UTR submission, manual verification, lifetime replacement warranty.</p>
       </div>
       <div class="footer-col">
-        <h4>Navigate</h4>
+        <h4>Navigation</h4>
         <ul>
           <li><a href="/">Home</a></li>
-          <li><a href="#games">Browse Games</a></li>
+          <li><a href="#games">Games Catalog</a></li>
           <li><a href="#how-it-works">How It Works</a></li>
-          <li><a href="/contact.html">Contact</a></li>
+          <li><a href="/contact.html">Support</a></li>
         </ul>
       </div>
       <div class="footer-col">
-        <h4>Support</h4>
+        <h4>Help &amp; Info</h4>
         <ul>
-          <li><a href="/contact.html">Help Center</a></li>
-          <li><a href="#how-it-works">Delivery Guide</a></li>
-          <li><a href="/contact.html">Warranty Claim</a></li>
+          <li><a href="/contact.html">WhatsApp Support</a></li>
+          <li><a href="#how-it-works">Offline Guide</a></li>
+          <li><a href="/contact.html">Replacement Warranty</a></li>
         </ul>
       </div>
       <div class="footer-col">
-        <h4>Contact</h4>
+        <h4>Contact &amp; UPI</h4>
         <ul>
+          <li><strong>UPI ID:</strong> 9851228158@fam</li>
           <li><a href="https://wa.me/917908719976" target="_blank">WhatsApp: +91 79087 19976</a></li>
-          <li><a href="mailto:support@gamifydeals.com">support@gamifydeals.com</a></li>
         </ul>
       </div>
     </div>
     <div class="footer-bottom">
-      <p>© 2024 GamifyDeals.com · Payments by Razorpay</p>
+      <p>© GamifyDeals · Shared Steam Accounts</p>
       <div class="footer-tags">
-        <span class="footer-tag">Instant Delivery</span>
-        <span class="footer-tag">Lifetime Warranty</span>
-        <span class="footer-tag">Razorpay Secure</span>
+        <span class="footer-tag">UPI Payment</span>
+        <span class="footer-tag">Offline Steam Accounts</span>
+        <span class="footer-tag">Replacement Warranty</span>
       </div>
     </div>
   </div>
 </footer>
 
-<!-- BUY MODAL (email collection → Razorpay) -->
+<!-- BUY MODAL (Step 1: Contact Info -> Step 2: UPI QR & UTR Submission) -->
 <div class="modal-overlay" id="buyModal">
   <div class="modal">
     <div class="modal-header">
-      <div><h3>Complete Your Order</h3><p>Enter your email to continue to payment</p></div>
+      <div>
+        <h3 id="modalTitle">Complete Your Order</h3>
+        <p id="modalSubtitle">Step 1: Enter your details</p>
+      </div>
       <button class="modal-close" id="closeModal">✕</button>
     </div>
-    <div class="modal-game-row">
-      <img class="modal-game-img" id="modalGameImg" src="" alt="" onerror="this.style.display='none'"/>
-      <div style="flex:1;min-width:0">
-        <div class="modal-game-title" id="modalGameName">Game Name</div>
-        <div style="font-size:11px;color:var(--text-muted)" id="modalGenre">Genre</div>
-        <div class="modal-game-price" id="modalGamePrice">₹—</div>
+
+    <!-- Step 1 Form: Email & Phone -->
+    <div id="checkoutStep1">
+      <div class="modal-game-row">
+        <img class="modal-game-img" id="modalGameImg" src="" alt="" onerror="this.style.display='none'"/>
+        <div style="flex:1;min-width:0">
+          <div class="modal-game-title" id="modalGameName">Game Name</div>
+          <div style="font-size:11px;color:var(--text-muted)" id="modalGenre">Genre</div>
+          <div class="modal-game-price" id="modalGamePrice">₹—</div>
+        </div>
+      </div>
+      <div class="modal-form">
+        <div class="modal-form-group">
+          <label>Email Address *</label>
+          <input type="email" id="buyerEmail" placeholder="your@email.com" autocomplete="email"/>
+          <small>Required to access your credentials after verification.</small>
+        </div>
+        <div class="modal-form-group">
+          <label>WhatsApp Number (optional)</label>
+          <input type="tel" id="buyerWhatsapp" placeholder="+91 98765 43210"/>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn-proceed" id="proceedToPayBtn">Generate UPI QR Code →</button>
+        <button class="btn-cancel" id="cancelModal">Cancel</button>
       </div>
     </div>
-    <div class="modal-form">
-      <div class="modal-form-group">
-        <label>Email Address *</label>
-        <input type="email" id="buyerEmail" placeholder="your@email.com" autocomplete="email"/>
-        <small>Your order credentials will be accessible via this email's order page.</small>
+
+    <!-- Step 2 Form: Dynamic UPI QR Code & UTR Submission -->
+    <div id="checkoutStep2" style="display:none;">
+      <div class="upi-qr-box">
+        <div class="upi-qr-title">Scan QR with GPay / PhonePe / Paytm</div>
+        <div class="qr-img-container">
+          <img id="upiQrImage" src="" alt="UPI QR Code"/>
+        </div>
+        <div class="upi-details">
+          <div><strong>UPI ID:</strong> <span id="upiIdDisplay">9851228158@fam</span> <button class="btn-copy-small" onclick="copyUpiId()">Copy</button></div>
+          <div><strong>Amount:</strong> <span id="upiAmountDisplay" style="color:var(--accent);font-weight:700">₹—</span></div>
+        </div>
       </div>
-      <div class="modal-form-group">
-        <label>WhatsApp (optional)</label>
-        <input type="tel" id="buyerWhatsapp" placeholder="+91 XXXXX XXXXX"/>
+
+      <div class="utr-form-section">
+        <label for="utrInput"><strong>Enter 12-Digit UPI Ref / UTR Number *</strong></label>
+        <input type="text" id="utrInput" placeholder="e.g. 420198765432" maxlength="16"/>
+        <small>Open your UPI app payment receipt to copy the 12-digit UTR / Ref No.</small>
+      </div>
+
+      <div class="modal-actions" style="margin-top:14px">
+        <button class="btn-proceed" id="submitUtrBtn">Submit Payment &amp; Get Access →</button>
+        <button class="btn-cancel" id="backToStep1Btn">← Back</button>
       </div>
     </div>
-    <ul class="modal-info-list">
-      <li class="modal-info-item"><span>🔐</span> Secure payment via Razorpay (UPI / Card / Net Banking)</li>
-      <li class="modal-info-item"><span>🛡️</span> Lifetime warranty – free replacement guaranteed</li>
-      <li class="modal-info-item"><span>⚡</span> Credentials on your order page within minutes</li>
-    </ul>
-    <div class="modal-actions">
-      <button class="btn-proceed" id="proceedBtn">Pay via Razorpay →</button>
-      <button class="btn-cancel" id="cancelModal">Cancel</button>
-    </div>
+
   </div>
 </div>
 
