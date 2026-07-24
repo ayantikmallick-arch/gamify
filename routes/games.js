@@ -51,32 +51,68 @@ router.get('/admin/list', requireAdmin, async (req, res) => {
   }
 });
 
-// ── POST /api/games – create game ───────────────────────────
-router.post('/', requireAdmin, async (req, res) => {
+// ── POST /api/games/add-with-account – Unified Add Game & Steam Account ──
+router.post('/add-with-account', requireAdmin, async (req, res) => {
   try {
-    const { name, genre, sub_genre, steam_app_id, price, original_price, badge, emoji, description } = req.body;
-    if (!name?.trim()) return res.status(400).json({ error: 'Game name is required.' });
-    if (!price || isNaN(parseFloat(price))) return res.status(400).json({ error: 'Valid price is required.' });
+    const { name, genre, sub_genre, steam_app_id, price, original_price, badge, emoji, description, steam_username, steam_password, slot_name } = req.body;
 
-    const { rows: [game] } = await pool.query(
-      `INSERT INTO games (name, genre, sub_genre, steam_app_id, price, original_price, badge, emoji, description)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *`,
-      [
-        name.trim(),
-        genre         || null,
-        sub_genre     || null,
-        steam_app_id  ? parseInt(steam_app_id) : null,
-        parseFloat(price),
-        original_price ? parseFloat(original_price) : null,
-        badge         || null,
-        emoji         || '🎮',
-        description   || null
-      ]
+    if (!name?.trim()) return res.status(400).json({ error: 'Game name is required.' });
+    if (!steam_username?.trim() || !steam_password?.trim()) {
+      return res.status(400).json({ error: 'Steam username and password are required.' });
+    }
+
+    const gameName = name.trim();
+    let game = null;
+
+    // Check if game already exists in DB
+    const { rows: existing } = await pool.query('SELECT * FROM games WHERE LOWER(name) = LOWER($1)', [gameName]);
+
+    if (existing.length > 0) {
+      game = existing[0];
+    } else {
+      // Insert game into DB
+      const { rows: [newGame] } = await pool.query(
+        `INSERT INTO games (name, genre, sub_genre, steam_app_id, price, original_price, badge, emoji, description)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+         RETURNING *`,
+        [
+          gameName,
+          genre || 'Action',
+          sub_genre || null,
+          steam_app_id ? parseInt(steam_app_id) : null,
+          price ? parseFloat(price) : 149,
+          original_price ? parseFloat(original_price) : 1799,
+          badge || null,
+          emoji || '🎮',
+          description || null
+        ]
+      );
+      game = newGame;
+    }
+
+    // Encrypt Steam Password
+    const enc = encrypt(steam_password.trim());
+
+    // Count existing slots for slot naming if not specified
+    const { rows: [{ count }] } = await pool.query('SELECT COUNT(*) FROM game_accounts WHERE game_id = $1', [game.id]);
+    const defaultSlotName = slot_name?.trim() || `Slot ${parseInt(count) + 1}`;
+
+    // Insert Steam Account Slot
+    const { rows: [account] } = await pool.query(
+      `INSERT INTO game_accounts (game_id, slot_name, steam_username, steam_password_enc, steam_iv, steam_auth_tag)
+       VALUES ($1, $2, $3, $4, $5, $6)
+       RETURNING id, slot_name, steam_username`,
+      [game.id, defaultSlotName, steam_username.trim(), enc.ciphertext, enc.iv, enc.authTag]
     );
-    res.status(201).json(game);
+
+    res.status(201).json({
+      success: true,
+      game,
+      account
+    });
   } catch (err) {
-    console.error('[Games] Create error:', err);
-    res.status(500).json({ error: 'Failed to create game.' });
+    console.error('[Games] Add with account error:', err);
+    res.status(500).json({ error: 'Failed to save game and Steam account.' });
   }
 });
 
@@ -150,7 +186,7 @@ router.get('/:id/accounts', requireAdmin, async (req, res) => {
           authTag:    acc.steam_auth_tag
         });
       } catch (e) {
-        password = '[Decryption Failed]';
+        password = '[Decryption Error]';
       }
       return {
         id:             acc.id,
@@ -183,7 +219,6 @@ router.post('/:id/accounts', requireAdmin, async (req, res) => {
     const slotName = slot_name?.trim() || 'Slot 1';
 
     if (account_id) {
-      // Update existing slot
       const { rows: [acc] } = await pool.query(
         `UPDATE game_accounts
          SET slot_name          = $1,
@@ -198,7 +233,6 @@ router.post('/:id/accounts', requireAdmin, async (req, res) => {
       );
       return res.json({ success: true, account: acc });
     } else {
-      // Insert new slot
       const { rows: [acc] } = await pool.query(
         `INSERT INTO game_accounts (game_id, slot_name, steam_username, steam_password_enc, steam_iv, steam_auth_tag, notes)
          VALUES ($1, $2, $3, $4, $5, $6, $7)

@@ -26,6 +26,32 @@ function makeViewToken(order_id) {
   return jwt.sign({ order_id }, process.env.ORDER_TOKEN_SECRET);
 }
 
+// Helper to ensure a game exists in PostgreSQL before linking to orders
+async function ensureGameExists(gameId, amount) {
+  if (!gameId) return null;
+  const numericId = parseInt(gameId);
+
+  // Check if exists by ID or steam_app_id
+  const { rows: existing } = await pool.query(
+    'SELECT id FROM games WHERE id = $1 OR steam_app_id = $1',
+    [numericId]
+  );
+
+  if (existing.length > 0) {
+    return existing[0].id;
+  }
+
+  // Create game entry automatically if missing
+  const { rows: [newGame] } = await pool.query(
+    `INSERT INTO games (name, price, steam_app_id, active)
+     VALUES ($1, $2, $3, TRUE)
+     RETURNING id`,
+    [`Game #${numericId}`, parseFloat(amount), numericId]
+  );
+
+  return newGame.id;
+}
+
 // ── POST /api/orders/create – public ───────────────────────
 // Creates order & generates dynamic UPI QR Code
 router.post('/create', orderCreateLimiter, async (req, res) => {
@@ -36,6 +62,9 @@ router.post('/create', orderCreateLimiter, async (req, res) => {
       return res.status(400).json({ error: 'Valid buyer_email and amount are required.' });
     }
 
+    // Ensure foreign key exists in PostgreSQL
+    const validDbGameId = await ensureGameExists(game_id, amount);
+
     const { rows: [order] } = await pool.query(
       `INSERT INTO orders
          (buyer_email, buyer_name, buyer_whatsapp, game_id, amount, status)
@@ -45,7 +74,7 @@ router.post('/create', orderCreateLimiter, async (req, res) => {
         buyer_email.trim().toLowerCase(),
         buyer_name     ? buyer_name.trim()     : null,
         buyer_whatsapp ? buyer_whatsapp.trim() : null,
-        game_id        ? parseInt(game_id)     : null,
+        validDbGameId,
         parseFloat(amount)
       ]
     );
@@ -290,7 +319,7 @@ router.get('/:id', requireAdmin, async (req, res) => {
 // ── POST /api/orders/:id/approve – Admin Approve & Deliver ──
 router.post('/:id/approve', requireAdmin, async (req, res) => {
   try {
-    const { account_id } = req.body; // Optional specific account slot
+    const { account_id } = req.body;
 
     const { rows: [order] } = await pool.query('SELECT * FROM orders WHERE id = $1', [req.params.id]);
     if (!order) return res.status(404).json({ error: 'Order not found.' });
@@ -301,7 +330,6 @@ router.post('/:id/approve', requireAdmin, async (req, res) => {
       const { rows: [acc] } = await pool.query('SELECT * FROM game_accounts WHERE id = $1', [account_id]);
       targetAccount = acc;
     } else if (order.game_id) {
-      // Pick first active account slot for this game
       const { rows: [acc] } = await pool.query(
         'SELECT * FROM game_accounts WHERE game_id = $1 AND active = TRUE ORDER BY id ASC LIMIT 1',
         [order.game_id]
@@ -311,7 +339,7 @@ router.post('/:id/approve', requireAdmin, async (req, res) => {
 
     if (!targetAccount) {
       return res.status(400).json({
-        error: 'No active Steam account slot found for this game. Please add a Steam username & password in the Games tab first.'
+        error: 'No active Steam account slot found for this game. Please click "+ Add New Game" or "🔑 Steam Slots" in the Games tab to add a Steam username & password first.'
       });
     }
 

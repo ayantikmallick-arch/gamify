@@ -1,4 +1,4 @@
-/* admin/admin.js – GamifyDeals Admin Panel SPA (Manual UPI & Multi-Slot Steam Credentials) */
+/* admin/admin.js – GamifyDeals Admin Panel SPA (Automated Autocomplete Game & Credentials) */
 
 // ── STATE ─────────────────────────────────────────────────────
 let adminUser   = null;
@@ -112,7 +112,7 @@ function navigateTo(section) {
   document.querySelectorAll('.nav-item').forEach(i => i.classList.toggle('active', i.dataset.section === section));
   const titles = {
     dashboard: 'Dashboard Overview',
-    games:     'Games & Steam Account Slots',
+    games:     'Games Catalog & Credentials',
     orders:    'Orders & Payment Approvals',
     audit:     'Audit Log',
     team:      'Team',
@@ -217,10 +217,10 @@ async function renderDashboard() {
   `);
 }
 
-// ── GAMES MANAGEMENT ──────────────────────────────────────────
+// ── GAMES MANAGEMENT (ONE SINGLE "Add New Game" BUTTON) ────────
 let gamesSearch = '';
 async function renderGames() {
-  addTopbarBtn('+ Add New Game', () => openGameModal(null));
+  addTopbarBtn('+ Add New Game', openAddGameAutomatedModal);
   const url  = gamesSearch ? `/api/games/admin/list?search=${encodeURIComponent(gamesSearch)}` : '/api/games/admin/list';
   const rows = await api('GET', url).catch(() => []);
 
@@ -234,28 +234,29 @@ async function renderGames() {
   <div class="card">
     <div class="table-wrap">
       <table>
-        <thead><tr><th>Game</th><th>Genre</th><th>Price</th><th>Active Account Slots</th><th>Status</th><th>Actions</th></tr></thead>
+        <thead><tr><th>Game Banner &amp; Name</th><th>Genre</th><th>Price</th><th>Steam Account Slots</th><th>Actions</th></tr></thead>
         <tbody id="gamesBody">
           ${rows.length ? rows.map(g => `
           <tr>
             <td>
-              ${g.steam_app_id
-                ? `<img src="https://cdn.cloudflare.steamstatic.com/steam/apps/${g.steam_app_id}/capsule_sm_120.jpg"
-                        style="height:28px;border-radius:4px;vertical-align:middle;margin-right:8px;"
-                        onerror="this.style.display='none'">`
-                : esc(g.emoji || '🎮') + ' '}
-              <strong>${esc(g.name)}</strong>
+              <div style="display:flex;align-items:center;gap:12px">
+                <img src="${g.steam_app_id ? `https://cdn.cloudflare.steamstatic.com/steam/apps/${g.steam_app_id}/capsule_sm_120.jpg` : '/logo.png'}"
+                     style="width:50px;height:32px;border-radius:4px;object-fit:cover;background:#1a1d28"
+                     onerror="this.src='/logo.png'">
+                <div>
+                  <strong style="font-size:14px;color:#e8eaf0">${esc(g.name)}</strong>
+                  ${g.sub_genre ? `<div style="font-size:11px;color:#6b7280">${esc(g.sub_genre)}</div>` : ''}
+                </div>
+              </div>
             </td>
-            <td class="muted">${esc(g.genre || '—')}</td>
-            <td>₹${parseFloat(g.price).toFixed(0)}</td>
-            <td><span class="badge ${g.total_slots > 0 ? 'badge-green' : 'badge-gold'}">${g.total_slots} slot${g.total_slots!==1?'s':''} ready</span></td>
-            <td><span class="badge ${g.active ? 'badge-green' : 'badge-gray'}">${g.active ? 'Active' : 'Hidden'}</span></td>
+            <td class="muted"><span class="badge badge-gray">${esc(g.genre || 'Action')}</span></td>
+            <td><strong style="color:#e63946">₹${parseFloat(g.price).toFixed(0)}</strong></td>
+            <td><span class="badge ${g.total_slots > 0 ? 'badge-green' : 'badge-gold'}">${g.total_slots} slot${g.total_slots!==1?'s':''} active</span></td>
             <td>
               <button class="btn btn-primary btn-xs" onclick="openGameAccountsModal(${g.id}, '${esc(g.name).replace(/'/g, "\\'")}')">🔑 Steam Slots</button>
-              <button class="btn btn-ghost btn-xs" onclick="openGameModal(${g.id})">Edit</button>
               <button class="btn btn-danger btn-xs" onclick="deleteGame(${g.id})">Delete</button>
             </td>
-          </tr>`).join('') : '<tr><td colspan="6" class="muted" style="text-align:center;padding:30px">No games. Click "+ Add New Game" above</td></tr>'}
+          </tr>`).join('') : '<tr><td colspan="5" class="muted" style="text-align:center;padding:30px">No games added to active database yet. Click "+ Add New Game" above to select games and add credentials!</td></tr>'}
         </tbody>
       </table>
     </div>
@@ -268,83 +269,150 @@ async function renderGames() {
   });
 }
 
-async function openGameModal(id) {
-  let g = null;
-  if (id) g = (await api('GET', `/api/games/admin/list`).catch(() => [])).find(x => x.id === id);
+// ── AUTOMATED GAME SELECTION & CREDENTIALS MODAL ─────────────
+let selectedCatalogGame = null;
 
-  openModal(g ? 'Edit Game' : 'Add New Game', `
-    <div class="form-row">
-      <div class="form-group">
-        <label class="form-label">Game Name *</label>
-        <input class="form-input" id="fg-name" value="${esc(g?.name||'')}" placeholder="e.g. Grand Theft Auto V"/>
+function openAddGameAutomatedModal() {
+  selectedCatalogGame = null;
+
+  openModal('Add Game & Steam Credentials', `
+    <div style="font-size:12px;color:#9ea3b5;margin-bottom:14px">
+      Type a game name below. Select any game from the website catalog to automatically load its Banner, Price, and Genre!
+    </div>
+
+    <!-- Autocomplete Search Input -->
+    <div class="form-group" style="position:relative">
+      <label class="form-label">Search Game Name *</label>
+      <input class="form-input" id="autoGameSearch" placeholder="Type first letters (e.g. Grand Theft Auto, Red Dead, Cyberpunk...)" autocomplete="off"/>
+      <div id="autocompleteDropdown" style="position:absolute;top:100%;left:0;right:0;background:#1a1d28;border:1px solid #252836;border-radius:8px;max-height:180px;overflow-y:auto;z-index:99;display:none;"></div>
+    </div>
+
+    <!-- Auto-Filled Game Card Preview -->
+    <div id="gamePreviewCard" style="display:none;background:#0d0f14;border:1px solid #1f2333;border-radius:10px;padding:14px;margin-bottom:16px;align-items:center;gap:14px">
+      <img id="prevBanner" src="" style="width:70px;height:45px;border-radius:6px;object-fit:cover;background:#1a1d28"/>
+      <div style="flex:1">
+        <div id="prevName" style="font-size:14px;font-weight:700;color:#e8eaf0">Game Name</div>
+        <div style="font-size:11px;color:#6b7280"><span id="prevGenre">Genre</span> · Fixed Price: <strong style="color:#e63946" id="prevPrice">₹149</strong></div>
       </div>
+      <span class="badge badge-green">Auto-Filled</span>
+    </div>
+
+    <!-- Steam Credentials Section (2 clear fields) -->
+    <div style="background:#13161e;border:1px solid #1f2333;border-radius:10px;padding:16px;margin-top:10px">
+      <div style="font-size:13px;font-weight:600;color:#2ec4b6;margin-bottom:12px">🔑 Steam Account Credentials</div>
+      
       <div class="form-group">
-        <label class="form-label">Steam App ID</label>
-        <input class="form-input" id="fg-appid" type="number" value="${g?.steam_app_id||''}" placeholder="e.g. 271590"/>
+        <label class="form-label">Steam Username *</label>
+        <input class="form-input" id="ag-steam-username" placeholder="e.g. steam_user_account"/>
+      </div>
+      
+      <div class="form-group" style="margin-bottom:0">
+        <label class="form-label">Steam Password *</label>
+        <input class="form-input" type="text" id="ag-steam-password" placeholder="e.g. steam_pass_123"/>
       </div>
     </div>
-    <div class="form-row">
-      <div class="form-group">
-        <label class="form-label">Genre</label>
-        <input class="form-input" id="fg-genre" value="${esc(g?.genre||'')}" placeholder="Action"/>
-      </div>
-      <div class="form-group">
-        <label class="form-label">Sub-Genre</label>
-        <input class="form-input" id="fg-sub" value="${esc(g?.sub_genre||'')}" placeholder="Open World"/>
-      </div>
-    </div>
-    <div class="form-row">
-      <div class="form-group">
-        <label class="form-label">Price (₹) *</label>
-        <input class="form-input" id="fg-price" type="number" value="${g?.price||''}" placeholder="149"/>
-      </div>
-      <div class="form-group">
-        <label class="form-label">Original Price (₹)</label>
-        <input class="form-input" id="fg-orig" type="number" value="${g?.original_price||''}" placeholder="1799"/>
-      </div>
-    </div>
-    <div class="form-row">
-      <div class="form-group">
-        <label class="form-label">Badge</label>
-        <select class="form-select" id="fg-badge">
-          <option value="">None</option>
-          <option value="hot" ${g?.badge==='hot'?'selected':''}>🔥 Hot</option>
-          <option value="new" ${g?.badge==='new'?'selected':''}>✨ New</option>
-          <option value="bestseller" ${g?.badge==='bestseller'?'selected':''}>⭐ Bestseller</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label class="form-label">Emoji</label>
-        <input class="form-input" id="fg-emoji" value="${g?.emoji||'🎮'}" style="font-size:20px;width:70px" maxlength="4"/>
-      </div>
-    </div>
-    <div class="form-group">
-      <label class="form-label">Description</label>
-      <textarea class="form-textarea" id="fg-desc">${esc(g?.description||'')}</textarea>
-    </div>
-    ${g ? `<div class="form-group"><label class="form-label"><input type="checkbox" id="fg-active" ${g.active?'checked':''}> Active (visible in store)</label></div>` : ''}
   `, [
-    { label: g ? 'Save Changes' : 'Add Game', cls: 'btn-primary', action: async () => {
-      const body = {
-        name:           document.getElementById('fg-name').value.trim(),
-        steam_app_id:   document.getElementById('fg-appid').value || null,
-        genre:          document.getElementById('fg-genre').value.trim(),
-        sub_genre:      document.getElementById('fg-sub').value.trim(),
-        price:          document.getElementById('fg-price').value,
-        original_price: document.getElementById('fg-orig').value || null,
-        badge:          document.getElementById('fg-badge').value || null,
-        emoji:          document.getElementById('fg-emoji').value || '🎮',
-        description:    document.getElementById('fg-desc').value.trim(),
-      };
-      if (g) body.active = document.getElementById('fg-active').checked;
-      if (!body.name || !body.price) { toast('Name and price required', 'error'); return; }
-      const url = g ? `/api/games/${g.id}` : '/api/games';
-      const r   = await api(g ? 'PUT' : 'POST', url, body).catch(() => null);
-      if (!r?.id && !r?.name) { toast('Failed to save game', 'error'); return; }
-      toast(g ? 'Game updated' : 'Game added ✅'); closeModal(); renderGames();
-    }},
+    { label: 'Save Game & Steam Credentials', cls: 'btn-primary', id: 'saveAutoGameBtn', action: saveAutomatedGame },
     { label: 'Cancel', cls: 'btn-secondary', action: closeModal }
   ]);
+
+  // Attach Autocomplete Listener
+  const searchInput = document.getElementById('autoGameSearch');
+  const dropdown    = document.getElementById('autocompleteDropdown');
+
+  searchInput.addEventListener('input', () => {
+    const q = searchInput.value.toLowerCase().trim();
+    if (!q) { dropdown.style.display = 'none'; return; }
+
+    const catalog = typeof GAMES_DATA !== 'undefined' ? GAMES_DATA : [];
+    const matches = catalog.filter(g => g.name.toLowerCase().includes(q)).slice(0, 10);
+
+    if (!matches.length) {
+      dropdown.innerHTML = `<div style="padding:10px;font-size:12px;color:#6b7280;text-align:center">Custom game name: "${esc(q)}"</div>`;
+      dropdown.style.display = 'block';
+      return;
+    }
+
+    dropdown.innerHTML = matches.map(g => `
+      <div class="auto-item" style="padding:9px 12px;cursor:pointer;border-bottom:1px solid #1f2333;font-size:13px;display:flex;align-items:center;gap:10px;transition:background .15s"
+           onclick="selectCatalogGame(${g.id}, '${esc(g.name).replace(/'/g, "\\'")}', '${esc(g.genre)}', ${g.price}, '${esc(g.sub||'')}', '${esc(g.badge||'')}', '${esc(g.emoji||'🎮')}', ${g.orig||0})">
+        <img src="https://cdn.cloudflare.steamstatic.com/steam/apps/${g.id}/capsule_sm_120.jpg" style="width:36px;height:24px;border-radius:4px;object-fit:cover" onerror="this.style.display='none'"/>
+        <div style="flex:1">
+          <strong style="color:#e8eaf0">${esc(g.name)}</strong>
+          <span style="font-size:11px;color:#6b7280;margin-left:6px">${esc(g.genre)}</span>
+        </div>
+        <span style="color:#e63946;font-weight:700">₹${g.price}</span>
+      </div>
+    `).join('');
+
+    dropdown.style.display = 'block';
+  });
+}
+
+function selectCatalogGame(appId, name, genre, price, sub, badge, emoji, orig) {
+  selectedCatalogGame = { id: appId, name, genre, price, sub, badge, emoji, orig };
+
+  document.getElementById('autoGameSearch').value = name;
+  document.getElementById('autocompleteDropdown').style.display = 'none';
+
+  // Update preview card
+  const prevCard  = document.getElementById('gamePreviewCard');
+  const prevImg   = document.getElementById('prevBanner');
+  const prevName  = document.getElementById('prevName');
+  const prevGenre = document.getElementById('prevGenre');
+  const prevPrice = document.getElementById('prevPrice');
+
+  prevImg.src           = `https://cdn.cloudflare.steamstatic.com/steam/apps/${appId}/library_600x900.jpg`;
+  prevName.textContent  = name;
+  prevGenre.textContent = genre;
+  prevPrice.textContent = `₹${price}`;
+
+  prevCard.style.display = 'flex';
+}
+
+async function saveAutomatedGame() {
+  const searchVal      = document.getElementById('autoGameSearch').value.trim();
+  const steam_username = document.getElementById('ag-steam-username').value.trim();
+  const steam_password = document.getElementById('ag-steam-password').value.trim();
+
+  if (!searchVal) {
+    toast('Please select or type a Game Name', 'error');
+    return;
+  }
+  if (!steam_username || !steam_password) {
+    toast('Steam Username and Steam Password are required', 'error');
+    return;
+  }
+
+  const btn = document.getElementById('saveAutoGameBtn');
+  btn.disabled = true;
+  btn.textContent = 'Saving…';
+
+  const payload = {
+    name:           selectedCatalogGame ? selectedCatalogGame.name  : searchVal,
+    genre:          selectedCatalogGame ? selectedCatalogGame.genre : 'Action',
+    sub_genre:      selectedCatalogGame ? selectedCatalogGame.sub   : null,
+    steam_app_id:   selectedCatalogGame ? selectedCatalogGame.id    : null,
+    price:          selectedCatalogGame ? selectedCatalogGame.price  : 149,
+    original_price: selectedCatalogGame ? selectedCatalogGame.orig   : 1799,
+    badge:          selectedCatalogGame ? selectedCatalogGame.badge  : null,
+    emoji:          selectedCatalogGame ? selectedCatalogGame.emoji  : '🎮',
+    steam_username,
+    steam_password
+  };
+
+  const r = await api('POST', '/api/games/add-with-account', payload).catch(e => e.data);
+
+  if (!r?.success) {
+    toast(r?.error || 'Failed to save game and credentials', 'error');
+    btn.disabled = false;
+    btn.textContent = 'Save Game & Steam Credentials';
+    return;
+  }
+
+  toast(`Game "${payload.name}" & Steam Credentials saved successfully! ✅`);
+  closeModal();
+  renderGames();
 }
 
 async function deleteGame(id) {
@@ -354,13 +422,13 @@ async function deleteGame(id) {
   toast('Game deleted'); renderGames();
 }
 
-// ── MULTI-SLOT STEAM CREDENTIALS MODAL (Up to 10+ Accounts per Game) ──
+// ── MULTI-SLOT STEAM CREDENTIALS MODAL ─────────────────────────
 async function openGameAccountsModal(gameId, gameName) {
   const accounts = await api('GET', `/api/games/${gameId}/accounts`).catch(() => []);
 
   openModal(`Steam Credentials — ${gameName}`, `
     <div style="font-size:12px;color:#9ea3b5;margin-bottom:16px">
-      Add or update Steam account slots for this game. When an order is approved, buyers receive credentials from an active slot.
+      Manage active Steam account slots for <strong>${esc(gameName)}</strong>.
     </div>
 
     <!-- Accounts List -->
@@ -386,21 +454,21 @@ async function openGameAccountsModal(gameId, gameName) {
 
     <!-- Add/Edit Form -->
     <div style="background:#13161e;padding:14px;border-radius:8px;border:1px solid #1f2333">
-      <div style="font-size:13px;font-weight:600;margin-bottom:10px" id="accFormTitle">Add New Steam Slot</div>
+      <div style="font-size:13px;font-weight:600;margin-bottom:10px" id="accFormTitle">Add Additional Steam Slot</div>
       <input type="hidden" id="fa-account-id" value=""/>
       <div class="form-row">
         <div class="form-group">
           <label class="form-label">Slot Name</label>
-          <input class="form-input" id="fa-slot-name" placeholder="e.g. Slot 1 / Account A"/>
+          <input class="form-input" id="fa-slot-name" placeholder="e.g. Slot 2"/>
         </div>
         <div class="form-group">
           <label class="form-label">Steam Username *</label>
-          <input class="form-input" id="fa-username" placeholder="e.g. steam_user_01"/>
+          <input class="form-input" id="fa-username" placeholder="e.g. steam_user_02"/>
         </div>
       </div>
       <div class="form-group">
         <label class="form-label">Steam Password *</label>
-        <input class="form-input" type="text" id="fa-password" placeholder="e.g. steam_pass_123"/>
+        <input class="form-input" type="text" id="fa-password" placeholder="e.g. steam_pass_456"/>
       </div>
       <button class="btn btn-primary btn-sm" id="saveAccountBtn">Save Account Slot</button>
       <button class="btn btn-ghost btn-sm" id="resetAccountBtn" style="display:none" onclick="resetAccForm()">Cancel Edit</button>
@@ -451,7 +519,7 @@ function resetAccForm() {
   document.getElementById('fa-slot-name').value   = '';
   document.getElementById('fa-username').value    = '';
   document.getElementById('fa-password').value    = '';
-  document.getElementById('accFormTitle').textContent = 'Add New Steam Slot';
+  document.getElementById('accFormTitle').textContent = 'Add Additional Steam Slot';
   document.getElementById('resetAccountBtn').style.display = 'none';
 }
 
