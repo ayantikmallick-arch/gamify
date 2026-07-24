@@ -45,7 +45,7 @@ input, select, textarea { font-family: inherit; outline: none; }
   padding: 18px 16px; display: flex; align-items: center; gap: 10px;
   border-bottom: 1px solid var(--border); flex-shrink: 0;
 }
-.sidebar-logo img { height: 36px; object-fit: contain; }
+.sidebar-logo img { height: 36px; width: 36px; border-radius: 50%; object-fit: cover; background: transparent; flex-shrink: 0; }
 .sidebar-logo-text { font-size: 16px; font-weight: 700; line-height: 1.2; }
 .sidebar-logo-text em { color: var(--accent); font-style: normal; }
 .sidebar-logo-text small { display: block; font-size: 10px; color: var(--text-3); font-weight: 400; }
