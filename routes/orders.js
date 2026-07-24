@@ -176,8 +176,8 @@ router.post('/submit-utr', async (req, res) => {
     }
 
     const cleanUtr = utr_number.trim().replace(/[\s-]/g, '');
-    if (cleanUtr.length < 12 || cleanUtr.length > 18 || !/^[a-zA-Z0-9]{12,18}$/.test(cleanUtr)) {
-      return res.status(400).json({ error: 'UPI Transaction Reference / UTR must be exactly 12 to 18 digits.' });
+    if (!cleanUtr || !/^[0-9]{12}$/.test(cleanUtr)) {
+      return res.status(400).json({ error: 'UPI Transaction Reference / UTR must be exactly 12 digits.' });
     }
 
     if (!token || !verifyViewToken(token, order_id)) {
